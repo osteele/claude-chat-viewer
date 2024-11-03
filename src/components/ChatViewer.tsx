@@ -4,7 +4,9 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { ChatData, ContentPart } from '../types/types';
+import ReactMarkdown from 'react-markdown';
+import { parseMessage } from '../lib/messageParser';
+import { ChatData } from '../types/types';
 
 const STORAGE_KEY = 'chat-viewer-json';
 
@@ -88,66 +90,26 @@ interface MessageCardProps {
 const MessageCard: React.FC<MessageCardProps> = ({ message }) => {
   const isHuman = message.sender === 'human';
 
-  const parseArtifacts = (text: string): ContentPart[] => {
-    const parts: ContentPart[] = [];
-    let currentIndex = 0;
-
-    const artifactRegex = /<antArtifact[^>]*title="([^"]*)"[^>]*>([\s\S]*?)<\/antArtifact>/g;
-
-    let match: RegExpExecArray | null;
-    while ((match = artifactRegex.exec(text)) !== null) {
-      if (match.index > currentIndex) {
-        parts.push({
-          type: 'text',
-          content: text.slice(currentIndex, match.index)
-        });
-      }
-
-      parts.push({
-        type: 'artifact',
-        title: match[1],
-        content: match[2]
-      });
-
-      currentIndex = match.index + match[0].length;
-    }
-
-    if (currentIndex < text.length) {
-      parts.push({
-        type: 'text',
-        content: text.slice(currentIndex)
-      });
-    }
-
-    return parts;
-  };
-
   const renderContent = (content: ChatData['chat_messages'][number]['content']) => {
     return content.map((item, index) => {
       if (item.type === 'text') {
-        const parts = isHuman ?
+        const segments = isHuman ?
           [{ type: 'text' as const, content: item.text }] :
-          parseArtifacts(item.text);
+          parseMessage(item.text);
 
         return (
-          <div key={index} className={`
-            prose max-w-none rounded-lg p-4
-            ${isHuman ?
-              'bg-gradient-to-b from-[#e8e5d8] to-[#f5f4ee] border border-[#e8e7df]' :
-              'bg-[#f6f6f4] border border-[#e9e7e1]'
-            }
-          `}>
-            {parts.map((part, i) => {
-              if (part.type === 'artifact') {
+          <div key={index} className="prose max-w-none rounded-lg p-4">
+            {segments.map((segment, i) => {
+              if (segment.type === 'artifact') {
                 return (
                   <div key={i} className="my-4 bg-white rounded border border-[#e8e7df] cursor-pointer hover:bg-gray-50">
                     <div className="p-4">
                       <div className="flex items-center gap-2">
                         <div className="flex items-center justify-center w-6 h-6 bg-gray-100 rounded">
-                          <code className="text-sm text-gray-600">&lt;/&gt;</code>
+                          <div className="text-sm text-gray-600 font-mono">&lt;/&gt;</div>
                         </div>
                         <div>
-                          <div className="font-medium text-gray-900">{part.title}</div>
+                          <div className="font-medium text-gray-900">{segment.title}</div>
                           <div className="text-sm text-gray-500">Click to open component</div>
                         </div>
                       </div>
@@ -156,27 +118,40 @@ const MessageCard: React.FC<MessageCardProps> = ({ message }) => {
                 );
               }
 
-              return part.content.split('\n').map((line, j) => {
-                if (line.startsWith('```')) {
-                  return (
-                    <pre key={`${i}-${j}`} className="bg-gray-100 p-4 rounded-md overflow-x-auto">
-                      <code>{line.replace(/```/g, '')}</code>
-                    </pre>
-                  );
-                }
-
-                if (/^\d+\.\s/.test(line)) {
-                  const match = line.match(/^\d+/);
-                  return (
-                    <div key={`${i}-${j}`} className="flex gap-2">
-                      <span className="text-gray-500">{match ? match[0] : ''}.</span>
-                      <span>{line.replace(/^\d+\.\s/, '')}</span>
+              if (segment.type === 'thinking') {
+                return (
+                  <div key={i} className="my-4 bg-purple-50 rounded border border-purple-100 p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="flex items-center justify-center w-6 h-6 bg-purple-100 rounded">
+                        <div className="text-sm text-purple-600">💭</div>
+                      </div>
+                      <div className="text-sm text-purple-700">Thinking Process</div>
                     </div>
-                  );
-                }
+                    <div className="text-sm text-purple-600">
+                      {segment.content}
+                    </div>
+                  </div>
+                );
+              }
 
-                return line.trim() ? <p key={`${i}-${j}`}>{line}</p> : null;
-              });
+              return segment.content.split('\n').map((line, j) => (
+                <ReactMarkdown
+                  key={`${i}-${j}`}
+                  className="prose prose-sm max-w-none"
+                  components={{
+                    code: ({node, className, children, ...props}) => {
+                      return (
+                        <pre className="bg-gray-100 p-4 rounded-md overflow-x-auto">
+                          <code {...props}>{children}</code>
+                        </pre>
+                      )
+                    },
+                    li: ({children}) => <li className="my-0">{children}</li>
+                  }}
+                >
+                  {line}
+                </ReactMarkdown>
+              ));
             })}
           </div>
         );
@@ -186,17 +161,23 @@ const MessageCard: React.FC<MessageCardProps> = ({ message }) => {
   };
 
   return (
-    <div className="mb-8">
-      <div className="flex items-center gap-2 mb-2">
-        <div className="w-8 h-8 rounded-full bg-purple-200 flex items-center justify-center text-sm">
-          {isHuman ? 'OS' : 'A'}
+    <div className={`mb-8 bg-gray-200 rounded-md overflow-hidden
+      ${isHuman ?
+        'flex gap-2 bg-gradient-to-t from-[#e8e5d8] to-[#f5f4ee] border border-[#e8e7df]' :
+        'bg-[#f8f8f4] border border-[#e9e7e1]'
+      }`}>
+      {isHuman && (
+        <div className="flex-shrink-0 pt-4 pl-4">
+          <div className="w-6 h-6 rounded-full bg-[#5645a1] text-white flex items-center justify-center text-sm">
+            H
+          </div>
         </div>
-      </div>
+      )}
 
       {message.files && message.files.length > 0 && (
-        <div className="ml-10 mb-4">
+        <div className={`mb-4 hidden`}>
           {message.files.map((_file, i) => (
-            <div key={i} className="w-64 h-64 bg-gray-200 rounded-md overflow-hidden">
+            <div key={i} className="w-64 h-64 ">
               <img
                 src="/api/placeholder/256/256"
                 alt="Chat attachment"
@@ -207,7 +188,7 @@ const MessageCard: React.FC<MessageCardProps> = ({ message }) => {
         </div>
       )}
 
-      <div className="ml-10">
+      <div>
         {renderContent(message.content)}
       </div>
     </div>
