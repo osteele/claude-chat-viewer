@@ -102,16 +102,14 @@ const MessageCard: React.FC<MessageCardProps> = ({ message }) => {
             {segments.map((segment, i) => {
               if (segment.type === 'artifact') {
                 return (
-                  <div key={i} className="my-4 bg-white rounded border border-[#e8e7df] cursor-pointer hover:bg-gray-50">
-                    <div className="p-4">
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center justify-center w-6 h-6 bg-gray-100 rounded">
-                          <div className="text-sm text-gray-600 font-mono">&lt;/&gt;</div>
-                        </div>
-                        <div>
-                          <div className="font-medium text-gray-900">{segment.title}</div>
-                          <div className="text-sm text-gray-500">Click to open component</div>
-                        </div>
+                  <div key={i} className="my-4">
+                    <div className="flex rounded-lg border border-[#e8e7df] bg-[#f8f8f4] shadow-md cursor-pointer hover:bg-[#f5f4ee]">
+                      <div className="flex items-center justify-center w-14 border-r border-[#e8e7df]">
+                        <div className="text-sm text-gray-600 font-mono">&lt;/&gt;</div>
+                      </div>
+                      <div className="p-3">
+                        <div className="font-medium text-gray-900">{segment.title}</div>
+                        <div className="text-sm text-gray-500">Click to open component</div>
                       </div>
                     </div>
                   </div>
