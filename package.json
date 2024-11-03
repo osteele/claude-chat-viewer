@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit --skipLibCheck",
+    "prepare": "husky install",
+    "test": "bun test"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.0.5",
@@ -23,13 +25,22 @@
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
-    "@types/node": "^22.8.6",
+    "@types/bun": "^1.1.13",
     "@types/react": "^18.2.15",
     "@types/react-dom": "^18.2.7",
     "@vitejs/plugin-react": "^4.0.3",
     "autoprefixer": "^10.4.16",
+    "husky": "^9.1.6",
+    "lint-staged": "^15.2.10",
     "postcss": "^8.4.31",
     "tailwindcss": "^3.3.5",
+    "typescript": "^5.6.3",
     "vite": "^4.4.5"
+  },
+  "lint-staged": {
+    "**/*.{ts,tsx}": [
+      "bun run typecheck",
+      "bun run test"
+    ]
   }
 }
