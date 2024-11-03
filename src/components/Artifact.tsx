@@ -13,7 +13,7 @@ export function Artifact({ title, content, identifier: _identifier, artifactType
 
   return (
     <>
-      <div className="my-4">
+      <div className="my-4 [print-color-adjust:exact]">
         <div
           className="flex rounded-lg border border-[#e8e7df] bg-[#f5f4ef] shadow-md cursor-pointer hover:bg-[#f5f4ee]"
           onClick={() => setIsOpen(true)}
