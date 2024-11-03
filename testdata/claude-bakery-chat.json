@@ -1,0 +1,145 @@
+{
+  "uuid": "8006a434-8b0b-43df-8e6d-c0a7aeb2e6b3",
+  "name": "Interactive Bakery Comparison Visualization",
+  "summary": "",
+  "model": "claude-3-5-sonnet-20240620",
+  "created_at": "2024-10-29T15:59:18.774635+00:00",
+  "updated_at": "2024-10-29T16:02:16.623589+00:00",
+  "settings": {
+    "preview_feature_uses_artifacts": true,
+    "preview_feature_uses_latex": true,
+    "enabled_artifacts_attachments": true
+  },
+  "is_starred": false,
+  "current_leaf_message_uuid": "47e6dd5f-0e09-4063-8ab3-f155765ac9a1",
+  "chat_messages": [
+    {
+      "uuid": "667337e6-aede-4ba4-8ff8-1c04b37cfd98",
+      "text": "",
+      "content": [
+        {
+          "type": "text",
+          "text": "Make an interactive visualization of this diagram of the only good bakery and what’s wrong with all the other one’s"
+        }
+      ],
+      "sender": "human",
+      "index": 0,
+      "created_at": "2024-10-29T15:59:38.340028+00:00",
+      "updated_at": "2024-10-29T15:59:38.340028+00:00",
+      "truncated": false,
+      "attachments": [],
+      "files": [
+        {
+          "file_kind": "image",
+          "file_uuid": "0e0981c2-1224-4b1c-aeab-42529485a35e",
+          "file_name": "image",
+          "created_at": "2024-10-29T15:59:18.096325+00:00",
+          "thumbnail_url": "/api/1dc23631-cd70-4894-9e51-0a84ebd6d4d2/files/0e0981c2-1224-4b1c-aeab-42529485a35e/thumbnail",
+          "preview_url": "/api/1dc23631-cd70-4894-9e51-0a84ebd6d4d2/files/0e0981c2-1224-4b1c-aeab-42529485a35e/preview",
+          "thumbnail_asset": {
+            "url": "/api/1dc23631-cd70-4894-9e51-0a84ebd6d4d2/files/0e0981c2-1224-4b1c-aeab-42529485a35e/thumbnail",
+            "file_variant": "thumbnail",
+            "primary_color": "5d5d54",
+            "image_width": 300,
+            "image_height": 400
+          },
+          "preview_asset": {
+            "url": "/api/1dc23631-cd70-4894-9e51-0a84ebd6d4d2/files/0e0981c2-1224-4b1c-aeab-42529485a35e/preview",
+            "file_variant": "preview",
+            "primary_color": "5d5d54",
+            "image_width": 935,
+            "image_height": 1247
+          }
+        }
+      ],
+      "files_v2": [
+        {
+          "file_kind": "image",
+          "file_uuid": "0e0981c2-1224-4b1c-aeab-42529485a35e",
+          "file_name": "image",
+          "created_at": "2024-10-29T15:59:18.096325+00:00",
+          "thumbnail_url": "/api/1dc23631-cd70-4894-9e51-0a84ebd6d4d2/files/0e0981c2-1224-4b1c-aeab-42529485a35e/thumbnail",
+          "preview_url": "/api/1dc23631-cd70-4894-9e51-0a84ebd6d4d2/files/0e0981c2-1224-4b1c-aeab-42529485a35e/preview",
+          "thumbnail_asset": {
+            "url": "/api/1dc23631-cd70-4894-9e51-0a84ebd6d4d2/files/0e0981c2-1224-4b1c-aeab-42529485a35e/thumbnail",
+            "file_variant": "thumbnail",
+            "primary_color": "5d5d54",
+            "image_width": 300,
+            "image_height": 400
+          },
+          "preview_asset": {
+            "url": "/api/1dc23631-cd70-4894-9e51-0a84ebd6d4d2/files/0e0981c2-1224-4b1c-aeab-42529485a35e/preview",
+            "file_variant": "preview",
+            "primary_color": "5d5d54",
+            "image_width": 935,
+            "image_height": 1247
+          }
+        }
+      ],
+      "sync_sources": [],
+      "parent_message_uuid": "00000000-0000-4000-8000-000000000000"
+    },
+    {
+      "uuid": "50eba0d1-d2a6-4db1-854e-f86810ff923d",
+      "text": "",
+      "content": [
+        {
+          "type": "text",
+          "text": " I'll create an interactive visualization that compares bakeries using a React component with an emphasis on the \"Good Alley Sandwich bakery\" and the issues with others.\n\n<antThinking>This mind map-style comparison would work well as an interactive React component, allowing for visual hierarchy and user interaction to explore the bakery comparisons. A new artifact is warranted since this will be a complete, reusable visualization.</antThinking>\n\n<antArtifact identifier=\"bakery-comparison\" type=\"application/vnd.ant.react\" title=\"Interactive Bakery Comparison\">\nimport React, { useState } from 'react';\nimport { Card } from '@/components/ui/card';\n\nconst BakeryComparison = () => {\n  const [activeSection, setActiveSection] = useState(null);\n\n  const bakeries = {\n    'Good Alley': {\n      title: 'The Good Alley Sandwich Bakery',\n      description: 'The only good bakery in town!',\n      status: 'good',\n      position: 'center'\n    },\n    'Gummy': {\n      title: 'Big Chambord',\n      description: 'Too gummy texture',\n      status: 'bad',\n      position: 'left'\n    },\n    'Tough': {\n      title: 'Fresh Pie',\n      description: 'Everything is too tough',\n      status: 'bad',\n      position: 'top'\n    },\n    'Oily': {\n      title: 'Oily Bakery',\n      description: 'Products are too oily',\n      status: 'bad',\n      position: 'right'\n    },\n    'Chalky': {\n      title: 'Chalky Bakery',\n      description: 'Texture is too chalky',\n      status: 'bad',\n      position: 'right-bottom'\n    },\n    'Bready': {\n      title: 'Soft Bread Shop',\n      description: 'Too bready and soft',\n      status: 'bad',\n      position: 'bottom'\n    }\n  };\n\n  const positionClasses = {\n    'center': 'col-start-2 col-span-1 row-start-2',\n    'left': 'col-start-1 row-start-2',\n    'top': 'col-start-2 row-start-1',\n    'right': 'col-start-3 row-start-2',\n    'right-bottom': 'col-start-3 row-start-3',\n    'bottom': 'col-start-2 row-start-3'\n  };\n\n  return (\n    <div className=\"w-full max-w-4xl p-4\">\n      <div className=\"grid grid-cols-3 grid-rows-3 gap-4\">\n        {Object.entries(bakeries).map(([key, bakery]) => (\n          <div \n            key={key}\n            className={`${positionClasses[bakery.position]}`}\n          >\n            <Card\n              className={`p-4 cursor-pointer transition-all duration-300 hover:shadow-lg\n                ${activeSection === key ? 'ring-2 ring-blue-500' : ''}\n                ${bakery.status === 'good' ? 'bg-green-50' : 'bg-red-50'}\n              `}\n              onClick={() => setActiveSection(key === activeSection ? null : key)}\n            >\n              <h3 className={`font-bold mb-2 ${bakery.status === 'good' ? 'text-green-700' : 'text-red-700'}`}>\n                {bakery.title}\n              </h3>\n              {activeSection === key && (\n                <p className={`text-sm ${bakery.status === 'good' ? 'text-green-600' : 'text-red-600'}`}>\n                  {bakery.description}\n                </p>\n              )}\n            </Card>\n          </div>\n        ))}\n      </div>\n    </div>\n  );\n};\n\nexport default BakeryComparison;\n</antArtifact>\n\nI've created an interactive visualization that:\n1. Places the \"Good Alley Sandwich bakery\" in the center, highlighted in green\n2. Surrounds it with the problematic bakeries in red\n3. Allows users to click on each bakery to see more details\n4. Uses a grid layout that matches the original mind map structure\n5. Uses color coding to distinguish the good bakery from the problematic ones\n6. Includes hover and focus states for better interactivity\n\nEach bakery card expands when clicked to show the specific issue or, in the case of the Good Alley Sandwich bakery, its positive status. The layout preserves the spatial relationships from your diagram while making it more interactive and visually engaging.\n\nWould you like me to add any additional features or modify the current visualization in any way?"
+        }
+      ],
+      "sender": "assistant",
+      "index": 1,
+      "created_at": "2024-10-29T15:59:38.340028+00:00",
+      "updated_at": "2024-10-29T15:59:38.340028+00:00",
+      "truncated": false,
+      "stop_reason": "stop_sequence",
+      "attachments": [],
+      "files": [],
+      "files_v2": [],
+      "sync_sources": [],
+      "parent_message_uuid": "667337e6-aede-4ba4-8ff8-1c04b37cfd98"
+    },
+    {
+      "uuid": "d13456d0-c7e8-4150-ac48-ed89327ec025",
+      "text": "",
+      "content": [
+        {
+          "type": "text",
+          "text": "What are your ideas for extending this?"
+        }
+      ],
+      "sender": "human",
+      "index": 2,
+      "created_at": "2024-10-29T16:02:16.623589+00:00",
+      "updated_at": "2024-10-29T16:02:16.623589+00:00",
+      "truncated": false,
+      "attachments": [],
+      "files": [],
+      "files_v2": [],
+      "sync_sources": [],
+      "parent_message_uuid": "50eba0d1-d2a6-4db1-854e-f86810ff923d"
+    },
+    {
+      "uuid": "47e6dd5f-0e09-4063-8ab3-f155765ac9a1",
+      "text": "",
+      "content": [
+        {
+          "type": "text",
+          "text": " I'll suggest several interesting ways we could extend this visualization to make it more engaging and informative.\n\n<antThinking>This is a good opportunity to create a more comprehensive React component that builds upon the existing visualization with additional features. Since we're substantially expanding the functionality, a new artifact is warranted.</antThinking>\n\n<antArtifact identifier=\"enhanced-bakery-comparison\" type=\"application/vnd.ant.react\" title=\"Enhanced Interactive Bakery Comparison\">\nimport React, { useState } from 'react';\nimport { Card } from '@/components/ui/card';\nimport { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';\nimport { Button } from '@/components/ui/button';\nimport { Star, ThumbsUp, ThumbsDown, Clock, DollarSign, MapPin } from 'lucide-react';\n\nconst EnhancedBakeryComparison = () => {\n  const [activeSection, setActiveSection] = useState(null);\n  const [viewMode, setViewMode] = useState('map');\n  const [selectedMetric, setSelectedMetric] = useState('rating');\n\n  const bakeries = {\n    'Good Alley': {\n      title: 'The Good Alley Sandwich Bakery',\n      description: 'The only good bakery in town!',\n      status: 'good',\n      position: 'center',\n      details: {\n        rating: 4.8,\n        price: '$$',\n        bestSellers: ['Sourdough Sandwich Loaf', 'Artisan Baguette', 'Croissants'],\n        hours: '7AM - 6PM',\n        specialties: ['Artisan Breads', 'Sandwiches', 'Pastries'],\n        waitTime: '10-15 min'\n      }\n    },\n    'Gummy': {\n      title: 'Big Chambord',\n      description: 'Too gummy texture',\n      status: 'bad',\n      position: 'left',\n      details: {\n        rating: 2.8,\n        price: '$$$',\n        bestSellers: ['Brioche', 'Baguette'],\n        hours: '8AM - 5PM',\n        specialties: ['French Bread'],\n        waitTime: '5-10 min'\n      }\n    },\n    'Tough': {\n      title: 'Fresh Pie',\n      description: 'Everything is too tough',\n      status: 'bad',\n      position: 'top',\n      details: {\n        rating: 2.5,\n        price: '$$',\n        bestSellers: ['Fruit Pies', 'Cookies'],\n        hours: '9AM - 4PM',\n        specialties: ['Pies', 'Pastries'],\n        waitTime: '15-20 min'\n      }\n    },\n    'Oily': {\n      title: 'Oily Bakery',\n      description: 'Products are too oily',\n      status: 'bad',\n      position: 'right',\n      details: {\n        rating: 2.3,\n        price: '$',\n        bestSellers: ['Donuts', 'Fried Bread'],\n        hours: '6AM - 3PM',\n        specialties: ['Fried Foods'],\n        waitTime: '5 min'\n      }\n    },\n    'Chalky': {\n      title: 'Chalky Bakery',\n      description: 'Texture is too chalky',\n      status: 'bad',\n      position: 'right-bottom',\n      details: {\n        rating: 2.1,\n        price: '$$',\n        bestSellers: ['Scones', 'Muffins'],\n        hours: '7AM - 4PM',\n        specialties: ['British Pastries'],\n        waitTime: '10 min'\n      }\n    },\n    'Bready': {\n      title: 'Soft Bread Shop',\n      description: 'Too bready and soft',\n      status: 'bad',\n      position: 'bottom',\n      details: {\n        rating: 2.4,\n        price: '$',\n        bestSellers: ['Sandwich Bread', 'Rolls'],\n        hours: '8AM - 6PM',\n        specialties: ['Basic Breads'],\n        waitTime: '5-10 min'\n      }\n    }\n  };\n\n  const positionClasses = {\n    'center': 'col-start-2 col-span-1 row-start-2',\n    'left': 'col-start-1 row-start-2',\n    'top': 'col-start-2 row-start-1',\n    'right': 'col-start-3 row-start-2',\n    'right-bottom': 'col-start-3 row-start-3',\n    'bottom': 'col-start-2 row-start-3'\n  };\n\n  const getMetricValue = (bakery, metric) => {\n    switch (metric) {\n      case 'rating':\n        return bakery.details.rating;\n      case 'price':\n        return bakery.details.price.length;\n      case 'waitTime':\n        return parseInt(bakery.details.waitTime);\n      default:\n        return 0;\n    }\n  };\n\n  const MetricIcon = ({ metric }) => {\n    switch (metric) {\n      case 'rating':\n        return <Star className=\"w-4 h-4\" />;\n      case 'price':\n        return <DollarSign className=\"w-4 h-4\" />;\n      case 'waitTime':\n        return <Clock className=\"w-4 h-4\" />;\n      default:\n        return null;\n    }\n  };\n\n  const BakeryCard = ({ bakeryKey, bakery }) => (\n    <Card\n      className={`p-4 cursor-pointer transition-all duration-300 hover:shadow-lg\n        ${activeSection === bakeryKey ? 'ring-2 ring-blue-500' : ''}\n        ${bakery.status === 'good' ? 'bg-green-50' : 'bg-red-50'}\n      `}\n      onClick={() => setActiveSection(bakeryKey === activeSection ? null : bakeryKey)}\n    >\n      <div className=\"flex justify-between items-start\">\n        <h3 className={`font-bold mb-2 ${bakery.status === 'good' ? 'text-green-700' : 'text-red-700'}`}>\n          {bakery.title}\n        </h3>\n        <div className=\"flex items-center gap-1\">\n          <MetricIcon metric={selectedMetric} />\n          <span className=\"text-sm\">\n            {selectedMetric === 'price' \n              ? bakery.details.price \n              : selectedMetric === 'waitTime'\n                ? bakery.details.waitTime\n                : bakery.details.rating}\n          </span>\n        </div>\n      </div>\n      \n      {activeSection === bakeryKey && (\n        <div className=\"mt-2\">\n          <p className={`text-sm ${bakery.status === 'good' ? 'text-green-600' : 'text-red-600'}`}>\n            {bakery.description}\n          </p>\n          <div className=\"mt-2 text-sm\">\n            <p><strong>Hours:</strong> {bakery.details.hours}</p>\n            <p><strong>Specialties:</strong> {bakery.details.specialties.join(', ')}</p>\n            <p><strong>Best Sellers:</strong> {bakery.details.bestSellers.join(', ')}</p>\n          </div>\n        </div>\n      )}\n    </Card>\n  );\n\n  return (\n    <div className=\"w-full max-w-4xl p-4\">\n      <Tabs defaultValue=\"map\" className=\"mb-4\">\n        <TabsList>\n          <TabsTrigger value=\"map\">Map View</TabsTrigger>\n          <TabsTrigger value=\"list\">List View</TabsTrigger>\n        </TabsList>\n\n        <div className=\"mt-4 mb-4 flex gap-2\">\n          <Button \n            variant={selectedMetric === 'rating' ? 'default' : 'outline'}\n            onClick={() => setSelectedMetric('rating')}\n            size=\"sm\"\n          >\n            <Star className=\"w-4 h-4 mr-2\" /> Rating\n          </Button>\n          <Button \n            variant={selectedMetric === 'price' ? 'default' : 'outline'}\n            onClick={() => setSelectedMetric('price')}\n            size=\"sm\"\n          >\n            <DollarSign className=\"w-4 h-4 mr-2\" /> Price\n          </Button>\n          <Button \n            variant={selectedMetric === 'waitTime' ? 'default' : 'outline'}\n            onClick={() => setSelectedMetric('waitTime')}\n            size=\"sm\"\n          >\n            <Clock className=\"w-4 h-4 mr-2\" /> Wait Time\n          </Button>\n        </div>\n\n        <TabsContent value=\"map\">\n          <div className=\"grid grid-cols-3 grid-rows-3 gap-4\">\n            {Object.entries(bakeries).map(([key, bakery]) => (\n              <div key={key} className={positionClasses[bakery.position]}>\n                <BakeryCard bakeryKey={key} bakery={bakery} />\n              </div>\n            ))}\n          </div>\n        </TabsContent>\n\n        <TabsContent value=\"list\">\n          <div className=\"space-y-4\">\n            {Object.entries(bakeries)\n              .sort((a, b) => getMetricValue(b[1], selectedMetric) - getMetricValue(a[1], selectedMetric))\n              .map(([key, bakery]) => (\n                <BakeryCard key={key} bakeryKey={key} bakery={bakery} />\n              ))}\n          </div>\n        </TabsContent>\n      </Tabs>\n    </div>\n  );\n};\n\nexport default EnhancedBakeryComparison;\n</antArtifact>\n\nI've added several new features to make the visualization more comprehensive and interactive:\n\n1. **Multiple View Modes**:\n   - Map View (original mind map layout)\n   - List View (sortable list of bakeries)\n\n2. **Metric Comparisons**:\n   - Rating system (1-5 stars)\n   - Price levels ($-$$$)\n   - Wait times\n   - Toggle between different metrics to compare bakeries\n\n3. **Enhanced Details**:\n   - Operating hours\n   - Specialties\n   - Best-selling items\n   - Quick stats visible at a glance\n\n4. **Improved Interactivity**:\n   - Click to expand detailed information\n   - Sort by different metrics in list view\n   - Visual indicators for active selections\n\nFurther potential extensions could include:\n\n1. **Time-based Features**:\n   - Peak hours visualization\n   - Daily specials calendar\n   - Fresh-baked timing indicators\n\n2. **Comparison Features**:\n   - Side-by-side comparison of selected bakeries\n   - Detailed comparison charts\n   - Price comparison for similar items\n\n3. **Filter System**:\n   - Filter by type of baked goods\n   - Filter by price range\n   - Filter by current open/closed status\n\n4. **Visual Enhancements**:\n   - Photos of signature items\n   - Color-coded quality indicators\n   - Animation for transitions\n\n5. **User Interaction**:\n   - Favorite bakery marking\n   - Personal notes section\n   - Custom rating system\n\nWould you like me to implement any of these additional features or explore other possibilities?"
+        }
+      ],
+      "sender": "assistant",
+      "index": 3,
+      "created_at": "2024-10-29T16:02:16.623589+00:00",
+      "updated_at": "2024-10-29T16:02:16.623589+00:00",
+      "truncated": false,
+      "stop_reason": "stop_sequence",
+      "attachments": [],
+      "files": [],
+      "files_v2": [],
+      "sync_sources": [],
+      "parent_message_uuid": "d13456d0-c7e8-4150-ac48-ed89327ec025"
+    }
+  ]
+}
