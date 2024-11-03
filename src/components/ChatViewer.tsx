@@ -159,35 +159,43 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking }) => {
   };
 
   return (
-    <div className={`mb-8 rounded-md overflow-hidden
+    <>
+      {/* Print version - positioned above */}
+      <div className={`text-sm hidden print:block ${isHuman ? 'bg-[#5645a1]' : 'bg-[#d97656]'}`}>
+        {isHuman ? "Human" : "Claude"}
+      </div>
+      <div className={`mb-8 rounded-md overflow-hidden
       ${isHuman ?
-        'flex gap-2 bg-gradient-to-t from-[#e8e5d8] to-[#f5f4ee] border border-[#e8e7df]' :
-        'bg-[#f7f6f4] border border-[#e9e7e1]'
-      }`}>
-      <div className="flex-shrink-0 pt-4 pl-4">
-        <div className={`w-6 h-6 rounded-full text-white flex items-center justify-center text-sm ${isHuman ? 'bg-[#5645a1]' : 'bg-[#d97656]'}`}>
-          {isHuman ? "H" : "C"}
+          'flex gap-2 bg-gradient-to-t from-[#e8e5d8] to-[#f5f4ee] border border-[#e8e7df]' :
+          'bg-[#f7f6f4] border border-[#e9e7e1]'
+        }`}>
+        <div className="flex-shrink-0 pt-4 pl-4">
+          {/* Screen version */}
+          <div className={`w-6 h-6 rounded-full text-white flex items-center justify-center
+                          text-sm print:hidden ${isHuman ? 'bg-[#5645a1]' : 'bg-[#d97656]'}`}>
+            {isHuman ? "H" : "C"}
+          </div>
+        </div>
+
+        {message.files && message.files.length > 0 && (
+          <div className={`mb-4 hidden`}>
+            {message.files.map((_file, i) => (
+              <div key={i} className="w-64 h-64 ">
+                <img
+                  src="/api/placeholder/256/256"
+                  alt="Chat attachment"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div>
+          {renderContent(message.content)}
         </div>
       </div>
-
-      {message.files && message.files.length > 0 && (
-        <div className={`mb-4 hidden`}>
-          {message.files.map((_file, i) => (
-            <div key={i} className="w-64 h-64 ">
-              <img
-                src="/api/placeholder/256/256"
-                alt="Chat attachment"
-                className="w-full h-full object-cover"
-              />
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div>
-        {renderContent(message.content)}
-      </div>
-    </div>
+    </>
   );
 };
 
@@ -196,7 +204,7 @@ const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end px-1">
+      <div className="flex justify-end px-1 print:hidden">
         <label className="flex items-center gap-2 text-sm text-gray-500">
           <input
             type="checkbox"
@@ -246,25 +254,33 @@ const ChatViewer: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f1f0e7]">
+    <div className="min-h-screen bg-[#f1f0e7] print:bg-white">
       <div className="max-w-4xl mx-auto p-6">
-        <Tabs value={activeTab} onValueChange={val => setActiveTab(val as 'json' | 'view')}>
-          <TabsList className="mb-6">
-            <TabsTrigger value="json">Enter JSON</TabsTrigger>
-            <TabsTrigger value="view" disabled={!chatData}>View</TabsTrigger>
-          </TabsList>
+        {/* Show tabs only on screen */}
+        <div className="print:hidden">
+          <Tabs value={activeTab} onValueChange={val => setActiveTab(val as 'json' | 'view')}>
+            <TabsList className="mb-6">
+              <TabsTrigger value="json">Enter JSON</TabsTrigger>
+              <TabsTrigger value="view" disabled={!chatData}>View</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="json">
-            <JsonInput
-              onValidJson={handleValidJson}
-              initialJson={chatData ? JSON.stringify(chatData, null, 2) : ''}
-            />
-          </TabsContent>
+            <TabsContent value="json">
+              <JsonInput
+                onValidJson={handleValidJson}
+                initialJson={chatData ? JSON.stringify(chatData, null, 2) : ''}
+              />
+            </TabsContent>
 
-          <TabsContent value="view">
-            {chatData && <ConversationView data={chatData} />}
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="view">
+              {chatData && <ConversationView data={chatData} />}
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* Show conversation view directly when printing */}
+        <div className="hidden print:block">
+          {chatData && <ConversationView data={chatData} />}
+        </div>
       </div>
     </div>
   );
