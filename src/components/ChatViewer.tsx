@@ -1,6 +1,5 @@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -86,9 +85,10 @@ const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, initialJson = '' }) 
 
 interface MessageCardProps {
   message: ChatData['chat_messages'][number];
+  showThinking: boolean;
 }
 
-const MessageCard: React.FC<MessageCardProps> = ({ message }) => {
+const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking }) => {
   const isHuman = message.sender === 'human';
 
   const renderContent = (content: ChatData['chat_messages'][number]['content']) => {
@@ -99,7 +99,7 @@ const MessageCard: React.FC<MessageCardProps> = ({ message }) => {
           parseMessage(item.text);
 
         return (
-          <div key={index} className="prose max-w-none rounded-lg p-4">
+          <div key={index} className="prose max-w-none p-4">
             {segments.map((segment, i) => {
               if (segment.type === 'artifact') {
                 return (
@@ -114,8 +114,9 @@ const MessageCard: React.FC<MessageCardProps> = ({ message }) => {
               }
 
               if (segment.type === 'thinking') {
+                if (!showThinking) return null;
                 return (
-                  <div key={i} className="my-4 bg-purple-50 rounded border border-purple-100 p-4">
+                  <div key={i} className="my-4 bg-purple-50 rounded-2xl border border-purple-100 p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <div className="flex items-center justify-center w-6 h-6 bg-purple-100 rounded">
                         <div className="text-sm text-purple-600">💭</div>
@@ -132,16 +133,18 @@ const MessageCard: React.FC<MessageCardProps> = ({ message }) => {
               return segment.content.split('\n').map((line, j) => (
                 <ReactMarkdown
                   key={`${i}-${j}`}
-                  className="prose prose-sm max-w-none"
+                  className="prose prose-sm max-w-none leading-relaxed"
                   components={{
-                    code: ({node, className, children, ...props}) => {
+                    code({ className, children, ...props }) {
                       return (
                         <pre className="bg-gray-100 p-4 rounded-md overflow-x-auto">
-                          <code {...props}>{children}</code>
+                          <code {...props} className={className}>
+                            {children}
+                          </code>
                         </pre>
                       )
                     },
-                    li: ({children}) => <li className="my-0">{children}</li>
+                    li: ({ children }) => <li className="my-0">{children}</li>
                   }}
                 >
                   {line}
@@ -156,16 +159,16 @@ const MessageCard: React.FC<MessageCardProps> = ({ message }) => {
   };
 
   return (
-    <div className={`mb-8 bg-gray-200 rounded-md overflow-hidden
+    <div className={`mb-8 rounded-md overflow-hidden
       ${isHuman ?
         'flex gap-2 bg-gradient-to-t from-[#e8e5d8] to-[#f5f4ee] border border-[#e8e7df]' :
-        'bg-[#f8f8f4] border border-[#e9e7e1]'
+        'bg-[#f7f6f4] border border-[#e9e7e1]'
       }`}>
-        <div className="flex-shrink-0 pt-4 pl-4">
-          <div className={`w-6 h-6 rounded-full text-white flex items-center justify-center text-sm ${isHuman ? 'bg-[#5645a1]' : 'bg-[#f8f8f4]'}`}>
-            {isHuman ? "H" : "🤖"}
-          </div>
+      <div className="flex-shrink-0 pt-4 pl-4">
+        <div className={`w-6 h-6 rounded-full text-white flex items-center justify-center text-sm ${isHuman ? 'bg-[#5645a1]' : 'bg-[#d97656]'}`}>
+          {isHuman ? "H" : "C"}
         </div>
+      </div>
 
       {message.files && message.files.length > 0 && (
         <div className={`mb-4 hidden`}>
@@ -188,27 +191,32 @@ const MessageCard: React.FC<MessageCardProps> = ({ message }) => {
   );
 };
 
-interface ConversationViewProps {
-  data: ChatData;
-}
+const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
+  const [showThinking, setShowThinking] = useState(false);
 
-const ConversationView: React.FC<ConversationViewProps> = ({ data }) => {
   return (
     <div className="space-y-6">
-      <Card className="mb-6 bg-white border-[#e9e7e1]">
-        <div className="p-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-gray-600">💬</span>
-            <span className="font-medium">{data.name || 'Chat Conversation'}</span>
-          </div>
-        </div>
-      </Card>
-
-      <div className="space-y-6">
-        {data.chat_messages.map((message) => (
-          <MessageCard key={message.uuid} message={message} />
-        ))}
+      <div className="flex justify-end px-1">
+        <label className="flex items-center gap-2 text-sm text-gray-500">
+          <input
+            type="checkbox"
+            checked={showThinking}
+            onChange={(e) => setShowThinking(e.target.checked)}
+            className="rounded border-gray-300"
+          />
+          Show thinking process
+        </label>
       </div>
+
+      <div className="bg-white rounded-lg border border-[#e8e7df] p-4">
+        <h1 className="text-xl font-semibold">
+          {data.name || "Untitled Conversation"}
+        </h1>
+      </div>
+
+      {data.chat_messages.map((message) => (
+        <MessageCard key={message.uuid} message={message} showThinking={showThinking} />
+      ))}
     </div>
   );
 };

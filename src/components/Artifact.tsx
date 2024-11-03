@@ -15,10 +15,10 @@ export function Artifact({ title, content, identifier: _identifier, artifactType
     <>
       <div className="my-4">
         <div
-          className="flex rounded-lg border border-[#e8e7df] bg-[#f8f8f4] shadow-md cursor-pointer hover:bg-[#f5f4ee]"
+          className="flex rounded-lg border border-[#e8e7df] bg-[#f5f4ef] shadow-md cursor-pointer hover:bg-[#f5f4ee]"
           onClick={() => setIsOpen(true)}
         >
-          <div className="flex items-center justify-center w-14 border-r border-[#e8e7df]">
+          <div className="flex items-center justify-center w-14 border-r bg-[#f0eee5] border-[#e8e7df]">
             <div className="text-sm text-gray-600 font-mono">&lt;/&gt;</div>
           </div>
           <div className="p-3">
