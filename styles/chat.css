@@ -1,0 +1,22 @@
+/* Page background */
+body {
+  background-color: #f1f0e7;
+}
+
+/* Human message styling */
+.human-message {
+  background: linear-gradient(to bottom, #e8e5d8, #f5f4ee);
+  border: 1px solid #e8e7df;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+/* Assistant message styling */
+.assistant-message {
+  background-color: #f6f6f4;
+  border: 1px solid #e9e7e1;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin: 1rem 0;
+}
