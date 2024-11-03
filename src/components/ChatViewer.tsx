@@ -99,7 +99,7 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking }) => {
           parseMessage(item.text);
 
         return (
-          <div key={index} className="prose max-w-none p-4">
+          <div key={index} className="max-w-none p-4">
             {segments.map((segment, i) => {
               if (segment.type === 'artifact') {
                 return (
@@ -133,7 +133,7 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking }) => {
               return segment.content.split('\n').map((line, j) => (
                 <ReactMarkdown
                   key={`${i}-${j}`}
-                  className="prose prose-sm max-w-none leading-relaxed"
+                  className="prose font-serif max-w-none leading-loose"
                   components={{
                     code({ className, children, ...props }) {
                       return (
@@ -160,8 +160,23 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking }) => {
 
   return (
     <>
+      {message.files && message.files.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          {message.files.map((file, i) => (
+            <div key={i} className="inline-flex items-center px-3 py-2 bg-[#f5f4ef] border border-[#e8e7df] rounded-lg">
+              <a
+                href={`https://api.claude.ai/${file.preview_url}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline text-sm"
+              >Attachment #{i + 1}</a>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Print version - positioned above */}
-      <div className={`text-sm hidden print:block ${isHuman ? 'bg-[#5645a1]' : 'bg-[#d97656]'}`}>
+      <div className={`text-sm hidden print:block`}>
         {isHuman ? "Human" : "Claude"}
       </div>
       <div className={`mb-8 rounded-md overflow-hidden
@@ -176,20 +191,6 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking }) => {
             {isHuman ? "H" : "C"}
           </div>
         </div>
-
-        {message.files && message.files.length > 0 && (
-          <div className={`mb-4 hidden`}>
-            {message.files.map((_file, i) => (
-              <div key={i} className="w-64 h-64 ">
-                <img
-                  src="/api/placeholder/256/256"
-                  alt="Chat attachment"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            ))}
-          </div>
-        )}
 
         <div>
           {renderContent(message.content)}
