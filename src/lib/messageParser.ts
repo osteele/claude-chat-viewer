@@ -1,12 +1,24 @@
-type SegmentType = 'text' | 'thinking' | 'artifact';
-
-interface Segment {
-  type: SegmentType;
+type BaseSegment = {
+  type: string;
   content: string;
-  title?: string;
-  identifier?: string;
-  artifactType?: string;
 }
+
+type TextSegment = BaseSegment & {
+  type: 'text';
+}
+
+type ThinkingSegment = BaseSegment & {
+  type: 'thinking';
+}
+
+type ArtifactSegment = BaseSegment & {
+  type: 'artifact';
+  title: string;
+  identifier: string;
+  artifactType: string;
+}
+
+export type Segment = TextSegment | ThinkingSegment | ArtifactSegment;
 
 export function parseMessage(text: string): Segment[] {
   const segments: Segment[] = [];

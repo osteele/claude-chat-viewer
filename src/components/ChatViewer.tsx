@@ -2,11 +2,12 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { parseMessage } from '../lib/messageParser';
 import { ChatData } from '../types/types';
+import { Artifact } from './Artifact';
 
 const STORAGE_KEY = 'chat-viewer-json';
 
@@ -102,17 +103,13 @@ const MessageCard: React.FC<MessageCardProps> = ({ message }) => {
             {segments.map((segment, i) => {
               if (segment.type === 'artifact') {
                 return (
-                  <div key={i} className="my-4">
-                    <div className="flex rounded-lg border border-[#e8e7df] bg-[#f8f8f4] shadow-md cursor-pointer hover:bg-[#f5f4ee]">
-                      <div className="flex items-center justify-center w-14 border-r border-[#e8e7df]">
-                        <div className="text-sm text-gray-600 font-mono">&lt;/&gt;</div>
-                      </div>
-                      <div className="p-3">
-                        <div className="font-medium text-gray-900">{segment.title}</div>
-                        <div className="text-sm text-gray-500">Click to open component</div>
-                      </div>
-                    </div>
-                  </div>
+                  <Artifact
+                    key={i}
+                    title={segment.title}
+                    content={segment.content}
+                    identifier={segment.identifier}
+                    artifactType={segment.artifactType}
+                  />
                 );
               }
 
@@ -164,13 +161,11 @@ const MessageCard: React.FC<MessageCardProps> = ({ message }) => {
         'flex gap-2 bg-gradient-to-t from-[#e8e5d8] to-[#f5f4ee] border border-[#e8e7df]' :
         'bg-[#f8f8f4] border border-[#e9e7e1]'
       }`}>
-      {isHuman && (
         <div className="flex-shrink-0 pt-4 pl-4">
-          <div className="w-6 h-6 rounded-full bg-[#5645a1] text-white flex items-center justify-center text-sm">
-            H
+          <div className={`w-6 h-6 rounded-full text-white flex items-center justify-center text-sm ${isHuman ? 'bg-[#5645a1]' : 'bg-[#f8f8f4]'}`}>
+            {isHuman ? "H" : "🤖"}
           </div>
         </div>
-      )}
 
       {message.files && message.files.length > 0 && (
         <div className={`mb-4 hidden`}>
@@ -198,20 +193,14 @@ interface ConversationViewProps {
 }
 
 const ConversationView: React.FC<ConversationViewProps> = ({ data }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-
   return (
     <div className="space-y-6">
       <Card className="mb-6 bg-white border-[#e9e7e1]">
-        <div
-          className="p-4 flex items-center justify-between cursor-pointer"
-          onClick={() => setIsExpanded(!isExpanded)}
-        >
+        <div className="p-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-gray-600">🔄</span>
+            <span className="text-gray-600">💬</span>
             <span className="font-medium">{data.name || 'Chat Conversation'}</span>
           </div>
-          {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
         </div>
       </Card>
 
