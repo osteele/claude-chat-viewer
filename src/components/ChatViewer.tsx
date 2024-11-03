@@ -55,9 +55,13 @@ const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, initialJson = '' }) 
       <div className="text-sm text-gray-600">
         Paste a Claude Artifact JSON file here to visualize the conversation.
       </div>
-      <div className="text-sm text-gray-600">
-        See <a href="https://observablehq.com/@simonw/convert-claude-json-to-markdown">Convert Claude JSON to Markdown</a>
-        for instructions on how to export a Claude chat as JSON.
+      <div className="text-sm text-gray-600 prose">
+        Inspired by Simon Willison's <a href="https://observablehq.com/@simonw/convert-claude-json-to-markdown" target="_blank" rel="noopener noreferrer">Convert Claude JSON to Markdown</a>.
+        Largely written by <a href="https://cursor.com" target="_blank" rel="noopener noreferrer">Cursor</a> and <a href="https://anthropic.com" target="_blank" rel="noopener noreferrer">Claude</a>.
+      </div>
+      <div className="text-sm text-gray-600 prose">
+        See <a href="https://observablehq.com/@simonw/convert-claude-json-to-markdown" target="_blank" rel="noopener noreferrer">Convert Claude JSON to Markdown</a>
+        {' '}for instructions on how to export a Claude chat as JSON.
       </div>
 
       <textarea
@@ -168,8 +172,8 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking }) => {
                 href={`https://api.claude.ai/${file.preview_url}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-600 hover:underline text-sm"
-              >Attachment #{i + 1}</a>
+                className="text-blue-800 hover:underline text-sm"
+              >{message.files && message.files.length > 1 ? `Attachment #${i + 1}/${message.files.length}` : 'Attachment'}</a>
             </div>
           ))}
         </div>
@@ -257,13 +261,26 @@ const ChatViewer: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#f1f0e7] print:bg-white">
       <div className="max-w-4xl mx-auto p-6">
-        {/* Show tabs only on screen */}
         <div className="print:hidden">
           <Tabs value={activeTab} onValueChange={val => setActiveTab(val as 'json' | 'view')}>
-            <TabsList className="mb-6">
-              <TabsTrigger value="json">Enter JSON</TabsTrigger>
-              <TabsTrigger value="view" disabled={!chatData}>View</TabsTrigger>
-            </TabsList>
+            <div className="flex justify-between items-center mb-6">
+              <TabsList>
+                <TabsTrigger value="json">Enter JSON</TabsTrigger>
+                <TabsTrigger value="view" disabled={!chatData}>View</TabsTrigger>
+              </TabsList>
+
+              <a
+                href="https://github.com/osteele/claude-chat-viewer"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-gray-600 hover:text-gray-900"
+              >
+                <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">
+                  <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+                </svg>
+                GitHub
+              </a>
+            </div>
 
             <TabsContent value="json">
               <JsonInput
