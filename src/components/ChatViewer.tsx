@@ -4,8 +4,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import Instructions from '../content/instructions.mdx';
 import { parseMessage } from '../lib/messageParser';
-import { ChatData } from '../types/types';
+import { ChatData, ChatMessage } from '../types/types';
 import { Artifact } from './Artifact';
 
 const STORAGE_KEY = 'chat-viewer-json';
@@ -52,16 +53,8 @@ const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, initialJson = '' }) 
 
   return (
     <div className="space-y-4">
-      <div className="text-sm text-gray-600">
-        Paste a Claude Artifact JSON file here to visualize the conversation.
-      </div>
-      <div className="text-sm text-gray-600 prose">
-        Inspired by Simon Willison's <a href="https://observablehq.com/@simonw/convert-claude-json-to-markdown" target="_blank" rel="noopener noreferrer">Convert Claude JSON to Markdown</a>.
-        Largely written by <a href="https://cursor.com" target="_blank" rel="noopener noreferrer">Cursor</a> and <a href="https://anthropic.com" target="_blank" rel="noopener noreferrer">Claude</a>.
-      </div>
-      <div className="text-sm text-gray-600 prose">
-        See <a href="https://observablehq.com/@simonw/convert-claude-json-to-markdown" target="_blank" rel="noopener noreferrer">Convert Claude JSON to Markdown</a>
-        {' '}for instructions on how to export a Claude chat as JSON.
+      <div className="text-sm text-gray-600 prose leading-loose">
+        <Instructions />
       </div>
 
       <textarea
@@ -88,14 +81,14 @@ const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, initialJson = '' }) 
 };
 
 interface MessageCardProps {
-  message: ChatData['chat_messages'][number];
+  message: ChatMessage;
   showThinking: boolean;
 }
 
 const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking }) => {
   const isHuman = message.sender === 'human';
 
-  const renderContent = (content: ChatData['chat_messages'][number]['content']) => {
+  const renderContent = (content: ChatMessage['content']) => {
     return content.map((item, index) => {
       if (item.type === 'text') {
         const segments = isHuman ?
@@ -245,7 +238,6 @@ const ChatViewer: React.FC = () => {
         const parsed = JSON.parse(savedJson);
         if (validateSchema(parsed)) {
           setChatData(parsed);
-          setActiveTab('view');
         }
       } catch (err) {
         console.error('Error loading saved JSON:', err);
