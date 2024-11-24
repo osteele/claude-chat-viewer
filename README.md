@@ -6,6 +6,7 @@ A web application for viewing Claude chat conversations from exported JSON files
 
 - View Claude chat JSON exports in a readable format
 - Support for code blocks with syntax highlighting
+- Download all code and artifacts as a zip file
 - Copy entire conversations with formatting preserved
 - Display Claude's thinking process (optional)
 - Print-friendly layout
@@ -14,12 +15,20 @@ A web application for viewing Claude chat conversations from exported JSON files
 
 ## Usage
 
-Visit [claude-chat-viewer.vercel.app](https://claude-chat-viewer.vercel.app) to use the application.
+Visit [tools.osteele.com/claude-chat-viewer](https://tools.osteele.com/claude-chat-viewer) to use the application.
 
 1. Export your Claude chat as JSON
 2. Click "Enter JSON" in the viewer
 3. Paste your JSON
 4. View your conversation in a clean, readable format
+
+### Downloading Artifacts
+
+Click the "Download Artifacts" button to download all code snippets and artifacts as a zip file. The downloaded archive will:
+- Maintain file extensions based on language or MIME type
+- Preserve directory structure from file paths
+- Include all code snippets and tool outputs from the conversation
+- Name files based on their titles or content
 
 ### Copying Conversations
 

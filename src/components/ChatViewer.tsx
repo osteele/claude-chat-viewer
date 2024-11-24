@@ -7,6 +7,9 @@ import { Artifact } from "./Artifact";
 import { CodeBlock } from "./CodeBlock";
 import { JsonInput } from "./JsonInput";
 import { chatToText, chatToHtml } from "../lib/utils";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
+import mime from "mime-types";
 
 interface MessageCardProps {
   message: ChatMessage;
@@ -194,6 +197,64 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking }) => {
   );
 };
 
+const getFileInfo = (
+  content: string,
+  inputType: string,
+  language?: string,
+  title?: string
+) => {
+  // Check first line for file path
+  const lines = content.split("\n");
+  const firstLine = lines[0].trim();
+  const pathMatch = firstLine.match(
+    /^(?:\/\/|#|<!--)\s*([\w/./-]+\.\w+)\s*(?:-->)?$/
+  );
+
+  if (pathMatch) {
+    // Return the path and content without the first line
+    return {
+      path: pathMatch[1],
+      content: lines.slice(1).join("\n").trim(),
+    };
+  }
+
+  // Check if title already has an extension
+  if (title && /\.\w+$/.test(title)) {
+    return {
+      path: "",
+      content,
+      fileName: title, // Use the complete filename as is
+    };
+  }
+
+  // Try to get extension from MIME type first
+  let extension = mime.extension(inputType);
+
+  // If no extension found and we have a language, map common programming languages
+  if (!extension && language) {
+    // Handle programming languages not in mime-types
+    const languageExtensions: Record<string, string> = {
+      javascript: "js",
+      typescript: "ts",
+      python: "py",
+      ruby: "rb",
+      cpp: "cpp",
+      "c++": "cpp",
+      // Add only languages that aren't handled well by mime-types
+    };
+    extension = languageExtensions[language.toLowerCase()];
+  }
+
+  // Default to txt if nothing else worked
+  extension = extension || "txt";
+
+  return {
+    path: "",
+    content,
+    extension,
+  };
+};
+
 const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
   const [showThinking, setShowThinking] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
@@ -227,6 +288,58 @@ const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
     }
   };
 
+  const handleDownloadArtifacts = async () => {
+    const zip = new JSZip();
+    let artifactCount = 0;
+
+    // Collect all tool_use artifacts
+    data.chat_messages.forEach((message, messageIndex) => {
+      message.content.forEach((item, itemIndex) => {
+        if (item.type === "tool_use") {
+          artifactCount++;
+          const fileInfo = getFileInfo(
+            item.input.content,
+            item.input.type,
+            item.input.language,
+            item.input.title
+          );
+
+          let fileName: string;
+          if (fileInfo.path) {
+            // Use the path from the first line comment
+            fileName = fileInfo.path;
+          } else if (fileInfo.fileName) {
+            // Use the complete filename if provided
+            fileName = fileInfo.fileName;
+          } else {
+            // Generate a filename using the title or default name with extension
+            const baseFileName =
+              item.input.title || `artifact-${messageIndex}-${itemIndex}`;
+            fileName = `${baseFileName}.${fileInfo.extension}`;
+          }
+
+          // Create folders if the path includes directories
+          zip.file(fileName, fileInfo.content || item.input.content);
+        }
+      });
+    });
+
+    if (artifactCount === 0) return;
+
+    // Generate and download the zip file
+    const blob = await zip.generateAsync({ type: "blob" });
+    const chatTitle = data.name || "untitled-chat";
+    const sanitizedTitle = chatTitle.replace(/[^a-z0-9-]/gi, "_").toLowerCase();
+    saveAs(blob, `${sanitizedTitle}-artifacts.zip`);
+  };
+
+  // Find if there are any tool_use artifacts with content
+  const hasArtifacts = data.chat_messages.some((message) =>
+    message.content.some(
+      (item) => item.type === "tool_use" && item.input.content?.trim()
+    )
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center px-1 print:hidden">
@@ -244,26 +357,58 @@ const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
           )}
         </div>
 
-        <button
-          onClick={handleCopy}
-          className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 bg-white rounded-md border border-gray-200 hover:border-gray-300 transition-colors"
-        >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
+        <div className="flex gap-2">
+          {hasArtifacts && (
+            <button
+              onClick={handleDownloadArtifacts}
+              disabled={!hasArtifacts}
+              className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm
+                ${
+                  !hasArtifacts
+                    ? "text-gray-400 cursor-not-allowed"
+                    : "text-gray-600 hover:text-gray-900"
+                }
+                bg-white rounded-md border border-gray-200 hover:border-gray-300 transition-colors`}
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                />
+              </svg>
+              Download Artifacts
+            </button>
+          )}
+
+          <button
+            onClick={handleCopy}
+            className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 bg-white rounded-md border border-gray-200 hover:border-gray-300 transition-colors"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-            />
-          </svg>
-          {copySuccess ? "Copied!" : "Copy conversation"}
-        </button>
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+              />
+            </svg>
+            {copySuccess ? "Copied!" : "Copy conversation"}
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg border border-[#e8e7df] p-4">
