@@ -1,5 +1,14 @@
 import { z } from "zod";
 
+const AttachmentSchema = z.object({
+  id: z.string(),
+  file_name: z.string(),
+  file_size: z.number(),
+  file_type: z.string(),
+  extracted_content: z.string().optional(),
+  created_at: z.string(),
+});
+
 const ContentItemSchema = z.object({
   type: z.literal("text"),
   text: z.string(),
@@ -36,41 +45,56 @@ const FileSchema = z.object({
   preview_asset: PreviewAssetSchema,
 });
 
-const ChatMessageSchema = z.object({
-  uuid: z.string(),
-  sender: z.enum(["human", "assistant"]),
-  content: z.array(ContentItemSchema),
-  files: z.array(FileSchema).optional(),
-  text: z.string(),
-  index: z.number(),
-  created_at: z.string(),
-  updated_at: z.string(),
-  truncated: z.boolean().default(false),
-});
+const ChatMessageSchema = z.object(
+  {
+    uuid: z.string(),
+    index: z.number(),
+    sender: z.enum(["human", "assistant"]),
+    content: z.array(ContentItemSchema),
+    text: z.string(),
+    created_at: z.string(),
+    updated_at: z.string(),
+    truncated: z.boolean().default(false),
+    attachments: z.array(AttachmentSchema).optional(),
+    files: z.array(FileSchema).optional(),
+    files_v2: z.array(FileSchema).optional(),
+    sync_sources: z.array(z.any()).optional(),
+    parent_message_uuid: z.string().optional(),
+  },
+  {
+    required_error: "Chat message is required",
+    invalid_type_error: "Chat message must be an object",
+  }
+);
 
-const SettingsSchema = z
-  .object({
-    preview_feature_uses_artifacts: z.boolean(),
-    preview_feature_uses_latex: z.boolean(),
-    enabled_artifacts_attachments: z.boolean(),
-  })
-  .default({
-    preview_feature_uses_artifacts: false,
-    preview_feature_uses_latex: false,
-    enabled_artifacts_attachments: false,
-  });
+const SettingsSchema = z.object({
+  preview_feature_uses_artifacts: z.boolean(),
+  preview_feature_uses_latex: z.boolean(),
+  preview_feature_uses_citations: z.boolean().optional(),
+  enabled_artifacts_attachments: z.boolean(),
+  enabled_turmeric: z.boolean().optional(),
+});
 
 export const ChatDataSchema = z.object({
   uuid: z.string(),
-  name: z.string().default("Untitled Conversation"),
+  name: z.string(),
   summary: z.string(),
-  model: z.string(),
   created_at: z.string(),
   updated_at: z.string(),
-  chat_messages: z.array(ChatMessageSchema),
-  workspace_id: z.string(),
-  conversation_id: z.string(),
   settings: SettingsSchema,
   is_starred: z.boolean().default(false),
   current_leaf_message_uuid: z.string(),
+  chat_messages: z.array(ChatMessageSchema),
+  conversation_id: z.string().optional(),
+  model: z.string().optional(),
+  project_uuid: z.string().optional(),
+  project: z.any().optional(),
+  workspace_id: z.string().optional(),
 });
+
+// Export inferred types
+export type ChatData = z.infer<typeof ChatDataSchema>;
+export type ChatMessage = z.infer<typeof ChatMessageSchema>;
+export type ContentItem = z.infer<typeof ContentItemSchema>;
+export type FileData = z.infer<typeof FileSchema>;
+export type Settings = z.infer<typeof SettingsSchema>;

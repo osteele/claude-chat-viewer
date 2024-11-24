@@ -6,87 +6,126 @@ import { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import Instructions from '../content/instructions.mdx';
 import { parseMessage } from '../lib/messageParser';
-import { ChatData, ChatMessage } from '../types/types';
-import { Artifact } from './Artifact';
-import { ChatDataSchema } from "../schemas/chat";
+import { ChatData, ChatDataSchema } from "../schemas/chat";
+import { Artifact } from "./Artifact";
+import { fromError } from "zod-validation-error";
 
 const STORAGE_KEY = "chat-viewer-json";
 
+type ConversationOption = {
+  name: string;
+  uuid: string;
+  data: ChatData;
+};
+
 interface JsonInputProps {
   onValidJson: (data: ChatData) => void;
-  initialJson?: string;
 }
 
-const JsonInput: React.FC<JsonInputProps> = ({
-  onValidJson,
-  initialJson = "",
-}) => {
-  const [jsonText, setJsonText] = useState(initialJson);
-  const [error, setError] = useState<string>("");
+const JsonInput: React.FC<JsonInputProps> = ({ onValidJson }) => {
+  const [jsonText, setJsonText] = useState(
+    sessionStorage.getItem(STORAGE_KEY) || ""
+  );
+  const [options, setOptions] = useState<ConversationOption[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = () => {
-    try {
-      const parsed = JSON.parse(jsonText);
-      const dataWithDefaults = {
-        uuid: parsed.uuid || crypto.randomUUID(),
-        name: parsed.name || "Untitled Conversation",
-        summary: parsed.summary || "",
-        model: parsed.model || "unknown",
-        created_at: parsed.created_at || new Date().toISOString(),
-        updated_at: parsed.updated_at || new Date().toISOString(),
-        workspace_id: parsed.workspace_id || "default",
-        conversation_id: parsed.conversation_id || crypto.randomUUID(),
-        settings: {
-          preview_feature_uses_artifacts:
-            parsed.settings?.preview_feature_uses_artifacts ?? false,
-          preview_feature_uses_latex:
-            parsed.settings?.preview_feature_uses_latex ?? false,
-          enabled_artifacts_attachments:
-            parsed.settings?.enabled_artifacts_attachments ?? false,
-        },
-        is_starred: parsed.is_starred || false,
-        current_leaf_message_uuid:
-          parsed.current_leaf_message_uuid ||
-          parsed.chat_messages?.[parsed.chat_messages.length - 1]?.uuid ||
-          crypto.randomUUID(),
-        chat_messages: (parsed.chat_messages || []).map(
-          (msg: any, index: number) => ({
-            uuid: msg.uuid || crypto.randomUUID(),
-            sender: msg.sender === "human" ? "human" : "assistant",
-            content: msg.content || [],
-            files: msg.files?.map((file: any) => ({
-              file_kind: file.file_kind || "unknown",
-              file_uuid: file.file_uuid || crypto.randomUUID(),
-              file_name: file.file_name || "untitled",
-              created_at: file.created_at || new Date().toISOString(),
-              thumbnail_url: file.thumbnail_url,
-              preview_url: file.preview_url,
-              thumbnail_asset: file.thumbnail_asset,
-              preview_asset: file.preview_asset,
-            })),
-            text: msg.text || "",
-            index: msg.index ?? index,
-            created_at: msg.created_at || new Date().toISOString(),
-            updated_at: msg.updated_at || new Date().toISOString(),
-            truncated: msg.truncated || false,
-          })
-        ),
-        ...parsed,
-      };
+  useEffect(() => {
+    sessionStorage.setItem(STORAGE_KEY, jsonText);
+  }, [jsonText]);
 
-      const result = ChatDataSchema.safeParse(dataWithDefaults);
-
-      if (!result.success) {
-        throw new Error("Invalid chat data structure: " + result.error.message);
-      }
-
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(dataWithDefaults));
-      onValidJson(result.data);
-      setError("");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      handleSubmit();
     }
   };
+
+  const handleSubmit = () => {
+    let parsedData;
+    try {
+      parsedData = JSON.parse(jsonText);
+    } catch (err) {
+      if (err instanceof Error) {
+        throw new Error(
+          `Invalid JSON: ${err.message}. Please check your JSON syntax.`
+        );
+      }
+      throw new Error("Failed to parse JSON");
+    }
+
+    // Handle array of conversations
+    if (Array.isArray(parsedData)) {
+      switch (parsedData.length) {
+        case 0:
+          setError("JSON array is empty.");
+          return;
+        case 1:
+          // Singleton array
+          parsedData = parsedData[0];
+          break;
+        default:
+          // Validate each conversation in the array
+          const validConversations = parsedData
+            .map((conversation) => ChatDataSchema.safeParse(conversation))
+            .filter((result) => result.success)
+            .map((result) => result.data);
+
+          if (validConversations.length !== parsedData.length) {
+            console.info(
+              `${validConversations.length} out of ${parsedData.length} conversations are valid`
+            );
+            for (const conversation of parsedData) {
+              const result = ChatDataSchema.safeParse(conversation);
+              if (!result.success) {
+                const index = parsedData.indexOf(conversation);
+                const validationError = fromError(result.error);
+                console.error(
+                  `Conversation #${index + 1} is invalid: ${validationError}`
+                );
+              }
+            }
+            setError("The JSON is not an array of valid conversations.");
+            return;
+          }
+
+          // Show options if multiple valid conversations
+          setOptions(
+            validConversations.map((conversation) => ({
+              name: conversation.name || "Untitled Conversation",
+              uuid: conversation.uuid,
+              data: conversation,
+            }))
+          );
+          setError(null);
+          return;
+      }
+    }
+
+    // Single conversation object
+    const result = ChatDataSchema.safeParse(parsedData);
+    if (result.success) {
+      localStorage.setItem(STORAGE_KEY, jsonText);
+      onValidJson(result.data);
+      setError(null);
+      setOptions([]);
+    } else {
+      const validationError = fromError(result.error);
+
+      console.error(validationError);
+      setError(
+        `The following validation errors were found:\n${validationError.toString()}`
+      );
+    }
+  };
+
+  const selectConversation = (option: ConversationOption) => {
+    onValidJson(option.data);
+    setOptions([]);
+  };
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, jsonText);
+  }, [jsonText]);
 
   return (
     <div className="space-y-4">
@@ -98,32 +137,57 @@ const JsonInput: React.FC<JsonInputProps> = ({
         className="w-full h-96 p-4 font-mono text-sm border rounded-lg focus:ring-2 focus:ring-blue-500"
         value={jsonText}
         onChange={(e) => setJsonText(e.target.value)}
+        onKeyDown={handleKeyDown}
         placeholder="Paste JSON here..."
       />
 
       {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>Error parsing JSON: {error}</AlertDescription>
+          <AlertDescription className="whitespace-pre-wrap font-mono text-sm">
+            {error}
+          </AlertDescription>
         </Alert>
       )}
 
-      <Button onClick={handleSubmit} className="w-full">
-        Load Conversation
-      </Button>
+      {options.length > 0 ? (
+        <div className="space-y-4">
+          <div className="text-sm font-medium">
+            Multiple conversations found. Please select one:
+          </div>
+          <div className="space-y-2">
+            {options.map((option) => (
+              <Button
+                key={option.uuid}
+                onClick={() => selectConversation(option)}
+                variant="outline"
+                className="w-full justify-start text-left"
+              >
+                {option.name}
+              </Button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <Button onClick={handleSubmit} className="w-full">
+          Load Conversation
+        </Button>
+      )}
     </div>
   );
 };
 
 interface MessageCardProps {
-  message: ChatMessage;
+  message: ChatData["chat_messages"][number];
   showThinking: boolean;
 }
 
 const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking }) => {
   const isHuman = message.sender === "human";
 
-  const renderContent = (content: ChatMessage["content"]) => {
+  const renderContent = (
+    content: ChatData["chat_messages"][number]["content"]
+  ) => {
     return content.map((item, index) => {
       if (item.type === "text") {
         const segments = isHuman
@@ -219,6 +283,21 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking }) => {
         </div>
       )}
 
+      {message.attachments && message.attachments.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          {message.attachments.map((attachment, i) => (
+            <div
+              key={i}
+              className="inline-flex items-center px-3 py-2 bg-[#f5f4ef] border border-[#e8e7df] rounded-lg"
+            >
+              <span className="text-blue-800 text-sm">
+                {attachment.file_name}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Print version - positioned above */}
       <div className={`text-sm hidden print:block`}>
         {isHuman ? "Human" : "Claude"}
@@ -287,68 +366,6 @@ const ChatViewer: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"json" | "view">("json");
   const [chatData, setChatData] = useState<ChatData | null>(null);
 
-  useEffect(() => {
-    const savedJson = localStorage.getItem(STORAGE_KEY);
-    if (savedJson) {
-      try {
-        const parsed = JSON.parse(savedJson);
-        const dataWithDefaults = {
-          uuid: parsed.uuid || crypto.randomUUID(),
-          name: parsed.name || "Untitled Conversation",
-          summary: parsed.summary || "",
-          model: parsed.model || "unknown",
-          created_at: parsed.created_at || new Date().toISOString(),
-          updated_at: parsed.updated_at || new Date().toISOString(),
-          workspace_id: parsed.workspace_id || "default",
-          conversation_id: parsed.conversation_id || crypto.randomUUID(),
-          settings: {
-            preview_feature_uses_artifacts:
-              parsed.settings?.preview_feature_uses_artifacts ?? false,
-            preview_feature_uses_latex:
-              parsed.settings?.preview_feature_uses_latex ?? false,
-            enabled_artifacts_attachments:
-              parsed.settings?.enabled_artifacts_attachments ?? false,
-          },
-          is_starred: parsed.is_starred || false,
-          current_leaf_message_uuid:
-            parsed.current_leaf_message_uuid ||
-            parsed.chat_messages?.[parsed.chat_messages.length - 1]?.uuid ||
-            crypto.randomUUID(),
-          chat_messages: (parsed.chat_messages || []).map(
-            (msg: any, index: number) => ({
-              uuid: msg.uuid || crypto.randomUUID(),
-              sender: msg.sender === "human" ? "human" : "assistant",
-              content: msg.content || [],
-              files: msg.files?.map((file: any) => ({
-                file_kind: file.file_kind || "unknown",
-                file_uuid: file.file_uuid || crypto.randomUUID(),
-                file_name: file.file_name || "untitled",
-                created_at: file.created_at || new Date().toISOString(),
-                thumbnail_url: file.thumbnail_url,
-                preview_url: file.preview_url,
-                thumbnail_asset: file.thumbnail_asset,
-                preview_asset: file.preview_asset,
-              })),
-              text: msg.text || "",
-              index: msg.index ?? index,
-              created_at: msg.created_at || new Date().toISOString(),
-              updated_at: msg.updated_at || new Date().toISOString(),
-              truncated: msg.truncated || false,
-            })
-          ),
-          ...parsed,
-        };
-
-        const result = ChatDataSchema.safeParse(dataWithDefaults);
-        if (result.success) {
-          setChatData(result.data);
-        }
-      } catch (err) {
-        console.error("Error loading saved JSON:", err);
-      }
-    }
-  }, []);
-
   const handleValidJson = (data: ChatData) => {
     setChatData(data);
     setActiveTab("view");
@@ -388,10 +405,7 @@ const ChatViewer: React.FC = () => {
             </div>
 
             <TabsContent value="json">
-              <JsonInput
-                onValidJson={handleValidJson}
-                initialJson={chatData ? JSON.stringify(chatData, null, 2) : ""}
-              />
+              <JsonInput onValidJson={handleValidJson} />
             </TabsContent>
 
             <TabsContent value="view">

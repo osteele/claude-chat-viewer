@@ -28,7 +28,8 @@
     "react-markdown": "^9.0.1",
     "shadcn-ui": "^0.9.2",
     "tailwind-merge": "^2.5.4",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "zod-validation-error": "^3.4.0"
   },
   "devDependencies": {
     "@types/bun": "^1.1.13",
