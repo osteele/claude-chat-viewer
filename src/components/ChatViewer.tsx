@@ -6,6 +6,7 @@ import { ChatData } from "../schemas/chat";
 import { Artifact } from "./Artifact";
 import { CodeBlock } from "./CodeBlock";
 import { JsonInput } from "./JsonInput";
+import { chatToText, chatToHtml } from "../lib/utils";
 
 interface MessageCardProps {
   message: ChatData["chat_messages"][number];
@@ -182,6 +183,7 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking }) => {
 
 const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
   const [showThinking, setShowThinking] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   // Check if any message contains thinking segments
   const hasThinkingSegments = data.chat_messages.some((message) =>
@@ -192,21 +194,64 @@ const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
     )
   );
 
+  const handleCopy = async () => {
+    try {
+      const plainText = chatToText(data);
+      const htmlContent = chatToHtml(data);
+
+      // Create a clipboard item with both formats
+      const clipboardItem = new ClipboardItem({
+        "text/plain": new Blob([plainText], { type: "text/plain" }),
+        "text/html": new Blob([htmlContent], { type: "text/html" }),
+      });
+
+      await navigator.clipboard.write([clipboardItem]);
+
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      {hasThinkingSegments && (
-        <div className="flex justify-end px-1 print:hidden">
-          <label className="flex items-center gap-2 text-sm text-gray-500">
-            <input
-              type="checkbox"
-              checked={showThinking}
-              onChange={(e) => setShowThinking(e.target.checked)}
-              className="rounded border-gray-300"
-            />
-            Show thinking process
-          </label>
+      <div className="flex justify-between items-center px-1 print:hidden">
+        <div className="flex items-center gap-4">
+          {hasThinkingSegments && (
+            <label className="flex items-center gap-2 text-sm text-gray-500">
+              <input
+                type="checkbox"
+                checked={showThinking}
+                onChange={(e) => setShowThinking(e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              Show thinking process
+            </label>
+          )}
         </div>
-      )}
+
+        <button
+          onClick={handleCopy}
+          className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 bg-white rounded-md border border-gray-200 hover:border-gray-300 transition-colors"
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+            />
+          </svg>
+          {copySuccess ? "Copied!" : "Copy conversation"}
+        </button>
+      </div>
 
       <div className="bg-white rounded-lg border border-[#e8e7df] p-4">
         <h1 className="text-xl font-semibold">

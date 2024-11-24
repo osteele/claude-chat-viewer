@@ -6,6 +6,7 @@ A web application for viewing Claude chat conversations from exported JSON files
 
 - View Claude chat JSON exports in a readable format
 - Support for code blocks with syntax highlighting
+- Copy entire conversations with formatting preserved
 - Display Claude's thinking process (optional)
 - Print-friendly layout
 - Responsive design
@@ -19,6 +20,13 @@ Visit [claude-chat-viewer.vercel.app](https://claude-chat-viewer.vercel.app) to 
 2. Click "Enter JSON" in the viewer
 3. Paste your JSON
 4. View your conversation in a clean, readable format
+
+### Copying Conversations
+
+Click the "Copy conversation" button to copy the entire conversation to your clipboard. The copied text will:
+- Preserve formatting when pasted into rich text editors (like Google Docs or Word)
+- Include proper formatting for code blocks with monospace font
+- Fall back to clean plain text when pasted into plain text editors
 
 ### Printing
 
