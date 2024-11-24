@@ -4,7 +4,7 @@ import { AlertCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import Instructions from "../content/instructions.mdx";
 import { ChatData, ChatDataSchema } from "../schemas/chat";
-import { fromError } from "zod-validation-error";
+import { formatValidationErrors } from "../lib/utils";
 
 const STORAGE_KEY = "chat-viewer-json";
 
@@ -74,9 +74,17 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson }) => {
               const result = ChatDataSchema.safeParse(conversation);
               if (!result.success) {
                 const index = parsedData.indexOf(conversation);
-                const validationError = fromError(result.error);
+                const errors = result.error.errors.map((err) => ({
+                  path: err.path.join("."),
+                  message: err.message,
+                }));
                 console.error(
-                  `Conversation #${index + 1} is invalid: ${validationError}`
+                  `Conversation #${
+                    index + 1
+                  } is invalid:\n${formatValidationErrors(
+                    JSON.stringify(conversation, null, 2),
+                    errors
+                  )}`
                 );
               }
             }
@@ -105,12 +113,11 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson }) => {
       setError(null);
       setOptions([]);
     } else {
-      const validationError = fromError(result.error);
-
-      console.error(validationError);
-      setError(
-        `The following validation errors were found:\n${validationError.toString()}`
-      );
+      const errors = result.error.errors.map((err) => ({
+        path: err.path.join("."),
+        message: err.message,
+      }));
+      setError(formatValidationErrors(jsonText, errors));
     }
   };
 

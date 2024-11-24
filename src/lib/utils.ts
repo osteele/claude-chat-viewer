@@ -7,11 +7,11 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 function stripMarkdown(text: string): string {
-  // Basic markdown stripping - can be enhanced based on needs
   return text
     .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // Remove links but keep text
     .replace(/[*_~`]/g, "") // Remove basic markdown symbols
-    .replace(/^\s*[#-]\s+/gm, ""); // Remove headers and list markers
+    .replace(/^\s*[#-]\s+/gm, "") // Remove headers and list markers
+    .replace(/```(\w+)?\n([\s\S]*?)```/g, (_, __, code) => code.trim()); // Remove code block markers and language but keep content
 }
 
 export function chatToText(data: ChatData): string {
@@ -21,11 +21,17 @@ export function chatToText(data: ChatData): string {
       const content = message.content
         .map((item: { type: string; text?: string }) => {
           if (item.type === "text") {
-            return stripMarkdown(item.text ?? "");
+            // Handle code blocks before stripping markdown
+            const text = (item.text ?? "").replace(
+              /```(\w+)?\n([\s\S]*?)```/g,
+              (_, __, code) => code.trim()
+            );
+            return stripMarkdown(text);
           }
           return "";
         })
-        .join("\n");
+        .join("\n")
+        .trim();
       return `${sender}:\n${content}\n`;
     })
     .join("\n");
@@ -43,7 +49,8 @@ export function chatToHtml(data: ChatData): string {
                 // Convert code blocks with language
                 .replace(
                   /```(\w+)?\n([\s\S]*?)```/g,
-                  '<pre style="font-family: monospace; background-color: #f5f5f5; padding: 1em; border-radius: 4px; overflow-x: auto;"><code>$2</code></pre>'
+                  (_, __, code) =>
+                    `<pre style="font-family: monospace; background-color: #f5f5f5; padding: 1em; border-radius: 4px; overflow-x: auto;"><code>${code.trim()}</code></pre>`
                 )
                 // Convert inline code
                 .replace(
@@ -60,8 +67,123 @@ export function chatToHtml(data: ChatData): string {
           }
           return "";
         })
-        .join("\n");
+        .join("");
       return `<p><strong>${sender}:</strong></p><p>${content}</p>`;
     })
     .join("\n");
+}
+
+interface LineMap {
+  [path: string]: number;
+}
+
+function buildLineMap(json: string): LineMap {
+  const lines = json.split("\n");
+  const lineMap: LineMap = {};
+  let currentPath: string[] = [];
+  let arrayIndices: { [key: string]: number } = {};
+
+  for (let lineNum = 0; lineNum < lines.length; lineNum++) {
+    const line = lines[lineNum];
+    const trimmedLine = line.trim();
+
+    // Handle array elements
+    if (trimmedLine === "{") {
+      const currentPathStr = currentPath.join(".");
+      if (arrayIndices[currentPathStr] !== undefined) {
+        arrayIndices[currentPathStr]++;
+        // Store the line number for the array element itself
+        const arrayPath = [
+          ...currentPath,
+          arrayIndices[currentPathStr].toString(),
+        ].join(".");
+        lineMap[arrayPath] = lineNum + 1;
+      }
+    }
+
+    // Handle property names
+    const propertyMatch = trimmedLine.match(/^"([^"]+)"\s*:/);
+    if (propertyMatch) {
+      const key = propertyMatch[1];
+      const currentPathStr = currentPath.join(".");
+      const arrayIndex = arrayIndices[currentPathStr];
+
+      // Build the full path including array indices
+      const pathParts = [...currentPath];
+      if (arrayIndex !== undefined) {
+        pathParts.push(arrayIndex.toString());
+      }
+      pathParts.push(key);
+      const fullPath = pathParts.join(".");
+
+      // Store the line number for this property
+      lineMap[fullPath] = lineNum + 1;
+
+      // Look ahead for nested structures
+      const valueMatch = line.match(/:\s*(.+)$/);
+      if (valueMatch) {
+        const value = valueMatch[1].trim();
+        if (value === "[") {
+          currentPath.push(key);
+          arrayIndices[currentPath.join(".")] = -1;
+        } else if (value === "{") {
+          currentPath.push(key);
+        }
+      }
+
+      // Store line numbers for all parent paths
+      let parentPath = "";
+      for (const part of pathParts) {
+        parentPath = parentPath ? `${parentPath}.${part}` : part;
+        if (!lineMap[parentPath]) {
+          lineMap[parentPath] = lineNum + 1;
+        }
+      }
+    }
+
+    // Handle closing brackets
+    if (trimmedLine === "}" || trimmedLine === "},") {
+      currentPath.pop();
+    } else if (trimmedLine === "]" || trimmedLine === "],") {
+      delete arrayIndices[currentPath.join(".")];
+      currentPath.pop();
+    }
+  }
+
+  return lineMap;
+}
+
+export function formatValidationErrors(
+  json: string,
+  errors: Array<{ path: string; message: string }>
+): string {
+  const lineMap = buildLineMap(json);
+
+  const formattedErrors = errors.map((error) => {
+    // Convert array notation in path if needed
+    const normalizedPath = error.path.replace(/\[(\d+)\]/g, ".$1");
+
+    // Try exact path first
+    let line = lineMap[normalizedPath];
+
+    // If no exact match, try finding the deepest matching parent path
+    if (!line) {
+      const pathParts = normalizedPath.split(".");
+      let currentPath = "";
+      for (const part of pathParts) {
+        currentPath = currentPath ? `${currentPath}.${part}` : part;
+        if (lineMap[currentPath]) {
+          line = lineMap[currentPath];
+        }
+      }
+    }
+
+    const lineInfo = line ? ` (line ${line})` : "";
+    return `${error.message} at "${error.path}"${lineInfo}`;
+  });
+
+  return [
+    "The following validation errors were found:",
+    ...formattedErrors,
+  ].join("\n");
 }
