@@ -1,9 +1,10 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { ChatData } from "../schemas/chat";
+import { ChatData, ChatMessage } from "../schemas/chat";
+import Prism from "./prism-languages";
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 
 function stripMarkdown(text: string): string {
@@ -16,7 +17,7 @@ function stripMarkdown(text: string): string {
 
 export function chatToText(data: ChatData): string {
   return data.chat_messages
-    .map((message: ChatData["chat_messages"][number]) => {
+    .map((message: ChatMessage) => {
       const sender = message.sender === "human" ? "Human" : "Claude";
       const content = message.content
         .map((item: { type: string; text?: string }) => {
@@ -39,34 +40,51 @@ export function chatToText(data: ChatData): string {
 
 export function chatToHtml(data: ChatData): string {
   return data.chat_messages
-    .map((message: ChatData["chat_messages"][number]) => {
+    .map((message: ChatMessage) => {
       const sender = message.sender === "human" ? "Human" : "Claude";
       const content = message.content
-        .map((item: { type: string; text?: string }) => {
-          if (item.type === "text") {
-            return (
-              (item.text ?? "")
-                // Convert code blocks with language
-                .replace(
-                  /```(\w+)?\n([\s\S]*?)```/g,
-                  (_, __, code) =>
-                    `<pre style="font-family: monospace; background-color: #f5f5f5; padding: 1em; border-radius: 4px; overflow-x: auto;"><code>${code.trim()}</code></pre>`
-                )
-                // Convert inline code
-                .replace(
-                  /`([^`]+)`/g,
-                  '<code style="font-family: monospace; background-color: #f5f5f5; padding: 0.2em 0.4em; border-radius: 3px;">$1</code>'
-                )
-                // Convert bold
-                .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-                // Convert italic
-                .replace(/\*(.*?)\*/g, "<em>$1</em>")
-                // Convert newlines
-                .replace(/\n/g, "<br>")
-            );
+        .map(
+          (item: {
+            type: string;
+            text?: string;
+            language?: string;
+            input?: { title: string; content: string };
+          }) => {
+            if (item.type === "text") {
+              return (
+                (item.text ?? "")
+                  // Convert code blocks with language
+                  .replace(/```(\w+)?\n([\s\S]*?)```/g, (_, lang, code) => {
+                    const highlightedCode = Prism.highlight(
+                      code.trim(),
+                      Prism.languages[lang] || Prism.languages.plaintext,
+                      lang
+                    );
+                    return `<pre class="language-${lang}"><code class="language-${lang}">${highlightedCode}</code></pre>`;
+                  })
+                  // Convert inline code
+                  .replace(
+                    /`([^`]+)`/g,
+                    '<code style="font-family: monospace; background-color: #f5f5f5; padding: 0.2em 0.4em; border-radius: 3px;">$1</code>'
+                  )
+                  // Convert bold
+                  .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+                  // Convert italic
+                  .replace(/\*(.*?)\*/g, "<em>$1</em>")
+                  // Convert newlines
+                  .replace(/\n/g, "<br>")
+              );
+            } else if (item.type === "tool_use" && item.language) {
+              const highlightedCode = Prism.highlight(
+                item.text?.trim() || "",
+                Prism.languages[item.language] || Prism.languages.plaintext,
+                item.language
+              );
+              return `<div><strong>${item.input?.title}</strong><pre class="language-${item.language}"><code class="language-${item.language}">${highlightedCode}</code></pre></div>`;
+            }
+            return "";
           }
-          return "";
-        })
+        )
         .join("");
       return `<p><strong>${sender}:</strong></p><p>${content}</p>`;
     })

@@ -2,24 +2,36 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { parseMessage } from "../lib/messageParser";
-import { ChatData } from "../schemas/chat";
+import { ChatData, ChatMessage } from "../schemas/chat";
 import { Artifact } from "./Artifact";
 import { CodeBlock } from "./CodeBlock";
 import { JsonInput } from "./JsonInput";
 import { chatToText, chatToHtml } from "../lib/utils";
 
 interface MessageCardProps {
-  message: ChatData["chat_messages"][number];
+  message: ChatMessage;
   showThinking: boolean;
 }
 
 const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking }) => {
   const isHuman = message.sender === "human";
 
-  const renderContent = (
-    content: ChatData["chat_messages"][number]["content"]
-  ) => {
+  const renderContent = (content: ChatMessage["content"]) => {
     return content.map((item, index) => {
+      if (item.type === "tool_use") {
+        return (
+          <div className="ml-4 inline-block">
+            <Artifact
+              key={index}
+              title={item.input.title}
+              content={item.input.content}
+              identifier={item.input.id}
+              artifactType={item.input.type}
+            />
+          </div>
+        );
+      }
+
       if (item.type === "text") {
         const segments = isHuman
           ? [{ type: "text" as const, content: item.text }]
@@ -80,11 +92,12 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking }) => {
                   components={{
                     code({ className, children, ...props }) {
                       return (
-                        <pre className="bg-gray-100 p-4 rounded-md overflow-x-auto">
-                          <code {...props} className={className}>
-                            {children}
-                          </code>
-                        </pre>
+                        <code
+                          {...props}
+                          className={`text-[#986460] bg-[#f1f0eb] font-normal ${className}`}
+                        >
+                          {children}
+                        </code>
                       );
                     },
                     li: ({ children }) => <li className="my-0">{children}</li>,

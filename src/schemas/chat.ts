@@ -9,10 +9,40 @@ const AttachmentSchema = z.object({
   created_at: z.string(),
 });
 
-const ContentItemSchema = z.object({
-  type: z.literal("text"),
-  text: z.string(),
+const ToolUseSchema = z.object({
+  type: z.literal("tool_use"),
+  name: z.string(),
+  input: z.object({
+    id: z.string(),
+    type: z.string(),
+    title: z.string(),
+    command: z.string(),
+    content: z.string(),
+    language: z.string().optional(),
+    version_uuid: z.string(),
+  }),
 });
+
+const ToolResultSchema = z.object({
+  type: z.literal("tool_result"),
+  name: z.string(),
+  content: z.array(
+    z.object({
+      type: z.string(),
+      text: z.string(),
+    })
+  ),
+  is_error: z.boolean(),
+});
+
+const ContentItemSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("text"),
+    text: z.string(),
+  }),
+  ToolUseSchema,
+  ToolResultSchema,
+]);
 
 const ThumbnailAssetSchema = z
   .object({
@@ -45,27 +75,21 @@ const FileSchema = z.object({
   preview_asset: PreviewAssetSchema,
 });
 
-const ChatMessageSchema = z.object(
-  {
-    uuid: z.string(),
-    index: z.number(),
-    sender: z.enum(["human", "assistant"]),
-    content: z.array(ContentItemSchema),
-    text: z.string(),
-    created_at: z.string(),
-    updated_at: z.string(),
-    truncated: z.boolean().default(false),
-    attachments: z.array(AttachmentSchema).optional(),
-    files: z.array(FileSchema).optional(),
-    files_v2: z.array(FileSchema).optional(),
-    sync_sources: z.array(z.any()).optional(),
-    parent_message_uuid: z.string().optional(),
-  },
-  {
-    required_error: "Chat message is required",
-    invalid_type_error: "Chat message must be an object",
-  }
-);
+const ChatMessageSchema = z.object({
+  uuid: z.string(),
+  index: z.number(),
+  sender: z.enum(["human", "assistant"]),
+  content: z.array(ContentItemSchema),
+  text: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  truncated: z.boolean().default(false),
+  attachments: z.array(AttachmentSchema).optional(),
+  files: z.array(FileSchema).optional(),
+  files_v2: z.array(FileSchema).optional(),
+  sync_sources: z.array(z.any()).optional(),
+  parent_message_uuid: z.string().optional(),
+});
 
 const SettingsSchema = z.object({
   preview_feature_uses_artifacts: z.boolean(),
