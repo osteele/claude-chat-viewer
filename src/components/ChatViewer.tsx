@@ -354,19 +354,30 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking }) => {
 const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
   const [showThinking, setShowThinking] = useState(false);
 
+  // Check if any message contains thinking segments
+  const hasThinkingSegments = data.chat_messages.some((message) =>
+    message.content.some(
+      (item) =>
+        item.type === "text" &&
+        parseMessage(item.text).some((segment) => segment.type === "thinking")
+    )
+  );
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-end px-1 print:hidden">
-        <label className="flex items-center gap-2 text-sm text-gray-500">
-          <input
-            type="checkbox"
-            checked={showThinking}
-            onChange={(e) => setShowThinking(e.target.checked)}
-            className="rounded border-gray-300"
-          />
-          Show thinking process
-        </label>
-      </div>
+      {hasThinkingSegments && (
+        <div className="flex justify-end px-1 print:hidden">
+          <label className="flex items-center gap-2 text-sm text-gray-500">
+            <input
+              type="checkbox"
+              checked={showThinking}
+              onChange={(e) => setShowThinking(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            Show thinking process
+          </label>
+        </div>
+      )}
 
       <div className="bg-white rounded-lg border border-[#e8e7df] p-4">
         <h1 className="text-xl font-semibold">
