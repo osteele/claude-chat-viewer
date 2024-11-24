@@ -11,6 +11,12 @@ type ThinkingSegment = BaseSegment & {
   type: 'thinking';
 }
 
+type CodeSegment = BaseSegment & {
+  type: "code";
+  language: string;
+  path?: string;
+};
+
 type ArtifactSegment = BaseSegment & {
   type: 'artifact';
   title: string;
@@ -18,7 +24,11 @@ type ArtifactSegment = BaseSegment & {
   artifactType: string;
 }
 
-export type Segment = TextSegment | ThinkingSegment | ArtifactSegment;
+export type Segment =
+  | TextSegment
+  | ThinkingSegment
+  | CodeSegment
+  | ArtifactSegment;
 
 export function parseMessage(text: string): Segment[] {
   const segments: Segment[] = [];
@@ -27,48 +37,64 @@ export function parseMessage(text: string): Segment[] {
   // Regex patterns
   const thinkingPattern = /<antThinking>([\s\S]*?)<\/antThinking>/g;
   const artifactPattern = /<antArtifact\s+identifier="([^"]+)"\s+type="([^"]+)"\s+title="([^"]+)">([\s\S]*?)<\/antArtifact>/g;
+  const codePattern = /```([\w-]+)(?::([^\n]+))?\n([\s\S]*?)```/g;
 
   while (currentIndex < text.length) {
     // Find the next special tag
     const thinkingMatch = thinkingPattern.exec(text);
     const artifactMatch = artifactPattern.exec(text);
+    const codeMatch = codePattern.exec(text);
 
     // Find the closest match
     const nextThinkingIndex = thinkingMatch ? thinkingMatch.index : Infinity;
     const nextArtifactIndex = artifactMatch ? artifactMatch.index : Infinity;
+    const nextCodeIndex = codeMatch ? codeMatch.index : Infinity;
 
-    if (nextThinkingIndex === Infinity && nextArtifactIndex === Infinity) {
+    const nextIndex = Math.min(
+      nextThinkingIndex,
+      nextArtifactIndex,
+      nextCodeIndex
+    );
+
+    if (nextIndex === Infinity) {
       // No more special segments, add remaining text
       const remainingText = text.slice(currentIndex).trim();
       if (remainingText) {
-        segments.push({ type: 'text', content: remainingText });
+        segments.push({ type: "text", content: remainingText });
       }
       break;
     }
 
     // Add text before the next special segment
-    const nextIndex = Math.min(nextThinkingIndex, nextArtifactIndex);
     if (nextIndex > currentIndex) {
       const textContent = text.slice(currentIndex, nextIndex).trim();
       if (textContent) {
-        segments.push({ type: 'text', content: textContent });
+        segments.push({ type: "text", content: textContent });
       }
     }
 
     // Add the special segment
-    if (nextThinkingIndex === nextIndex) {
+    if (nextIndex === nextThinkingIndex) {
       segments.push({
-        type: 'thinking',
-        content: thinkingMatch![1].trim()
+        type: "thinking",
+        content: thinkingMatch![1].trim(),
       });
       currentIndex = thinkingMatch!.index + thinkingMatch![0].length;
+    } else if (nextIndex === nextCodeIndex) {
+      segments.push({
+        type: "code",
+        language: codeMatch![1],
+        path: codeMatch![2],
+        content: codeMatch![3].trim(),
+      });
+      currentIndex = codeMatch!.index + codeMatch![0].length;
     } else {
       segments.push({
-        type: 'artifact',
+        type: "artifact",
         identifier: artifactMatch![1],
         artifactType: artifactMatch![2],
         title: artifactMatch![3],
-        content: artifactMatch![4].trim()
+        content: artifactMatch![4].trim(),
       });
       currentIndex = artifactMatch!.index + artifactMatch![0].length;
     }
@@ -76,6 +102,7 @@ export function parseMessage(text: string): Segment[] {
     // Reset regex indices
     thinkingPattern.lastIndex = currentIndex;
     artifactPattern.lastIndex = currentIndex;
+    codePattern.lastIndex = currentIndex;
   }
 
   return segments;

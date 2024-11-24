@@ -9,6 +9,7 @@ import { parseMessage } from '../lib/messageParser';
 import { ChatData, ChatDataSchema } from "../schemas/chat";
 import { Artifact } from "./Artifact";
 import { fromError } from "zod-validation-error";
+import { CodeBlock } from "./CodeBlock";
 
 const STORAGE_KEY = "chat-viewer-json";
 
@@ -231,6 +232,17 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking }) => {
                 );
               }
 
+              if (segment.type === "code") {
+                return (
+                  <CodeBlock
+                    key={i}
+                    code={segment.content}
+                    language={segment.language}
+                    path={segment.path}
+                  />
+                );
+              }
+
               return segment.content.split("\n").map((line, j) => (
                 <ReactMarkdown
                   key={`${i}-${j}`}
@@ -285,16 +297,27 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking }) => {
 
       {message.attachments && message.attachments.length > 0 && (
         <div className="mb-4 flex flex-wrap gap-2">
-          {message.attachments.map((attachment, i) => (
-            <div
-              key={i}
-              className="inline-flex items-center px-3 py-2 bg-[#f5f4ef] border border-[#e8e7df] rounded-lg"
-            >
-              <span className="text-blue-800 text-sm">
-                {attachment.file_name}
-              </span>
-            </div>
-          ))}
+          {message.attachments.map((attachment, i) => {
+            const [baseName, extension] =
+              attachment.file_name.split(/\.(?=[^.]+$)/);
+            return (
+              <div
+                key={i}
+                className="px-3 py-8 bg-gradient-to-b from-[#fdfdfb] to-[#e6f5fc] border border-[#e8e7df] rounded-lg"
+              >
+                <div className="flex flex-col items-center gap-5">
+                  <span className="text-blue-600/80 text-[14px] font-medium">
+                    {baseName}
+                  </span>
+                  {extension && (
+                    <span className="px-2 py-0.25 bg-white border border-[#e8e7df] rounded-xl text-[11px] font-normal text-gray-800 uppercase">
+                      {extension}
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
