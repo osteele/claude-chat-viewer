@@ -125,7 +125,7 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking, artifa
   };
 
   return (
-    <div className="message-container">
+    <>
       {message.files && message.files.length > 0 && (
         <div className="mb-4 flex flex-wrap gap-2">
           {message.files.map((file, i) => (
@@ -200,7 +200,7 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking, artifa
 
         <div>{renderContent(message.content)}</div>
       </div>
-    </div>
+    </>
   );
 };
 

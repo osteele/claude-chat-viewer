@@ -126,17 +126,14 @@
     word-wrap: break-word !important;
   }
   
-  /* Prevent page breaks after message labels */
+  /* Keep message labels with the following content (like "keep with next") */
   .message-label {
     page-break-after: avoid;
     break-after: avoid;
   }
   
-  /* Keep message content together with label */
-  .message-container {
-    page-break-inside: avoid;
-    break-inside: avoid;
-  }
+  /* Remove the container rule that was preventing breaks within messages */
+  /* This allows message content to break across pages naturally */
   
   /* Force visibility for all print elements */
   [class*="print:block"] {
