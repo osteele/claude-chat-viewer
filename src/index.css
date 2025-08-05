@@ -104,15 +104,21 @@
     display: none !important;
   }
   
-  /* Print artifacts appendix */
+  /* Print artifacts appendix - with multiple selectors for better compatibility */
   .print-only-appendix {
     display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
     page-break-before: always;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   
   /* Better print styling */
   body {
     background: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   
   pre {
@@ -130,6 +136,28 @@
   .message-container {
     page-break-inside: avoid;
     break-inside: avoid;
+  }
+  
+  /* Force visibility for all print elements */
+  [class*="print:block"] {
+    display: block !important;
+    visibility: visible !important;
+  }
+  
+  /* Additional rule for Safari PDF export */
+  [data-print-only="true"] {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+}
+
+/* Additional print media rule for Safari */
+@media print and (-webkit-min-device-pixel-ratio:0) {
+  .print-only-appendix {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
   }
 }
 

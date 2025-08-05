@@ -521,7 +521,14 @@ const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
       
       {/* Print-only artifacts appendix */}
       {showArtifactsInPrint && artifacts.length > 0 && (
-        <div className="print-only-appendix mt-12">
+        <div 
+          className="print-only-appendix mt-12"
+          data-print-only="true"
+          style={{ 
+            WebkitPrintColorAdjust: 'exact',
+            printColorAdjust: 'exact'
+          } as React.CSSProperties}
+        >
           <h2 className="text-2xl font-bold mb-6">Artifacts Appendix</h2>
           {artifacts.map((artifact, index) => (
             <div key={artifact.key} className="mb-8 border border-gray-300 rounded-lg p-4">
