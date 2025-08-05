@@ -19,5 +19,12 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['@mdx-js/react']
-  }
+  },
+  server: {
+    fs: {
+      // Allow serving files from the inputs directory
+      allow: ['.', '../inputs']
+    }
+  },
+  publicDir: 'public'
 } satisfies UserConfig)

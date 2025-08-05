@@ -22,6 +22,19 @@ Visit [tools.osteele.com/claude-chat-viewer](https://tools.osteele.com/claude-ch
 3. Paste your JSON
 4. View your conversation in a clean, readable format
 
+### Loading Files via URL Parameter
+
+In development mode, you can also load a JSON conversation file directly by providing a `file` URL parameter:
+
+```
+http://localhost:5173/?file=/inputs/gosper-chat.json
+```
+
+This is particularly useful for:
+- Development and testing with sample data
+- Sharing specific conversation files
+- Automating the viewer with pre-loaded content
+
 ### Downloading Artifacts
 
 Click the "Download Artifacts" button to download all code snippets and artifacts as a zip file. The downloaded archive will:

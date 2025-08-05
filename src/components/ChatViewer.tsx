@@ -1,5 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { parseMessage } from "../lib/messageParser";
 import { ChatData, ChatMessage } from "../schemas/chat";
@@ -431,11 +431,47 @@ const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
 const ChatViewer: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"json" | "view">("json");
   const [chatData, setChatData] = useState<ChatData | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const handleValidJson = (data: ChatData) => {
     setChatData(data);
     setActiveTab("view");
   };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const fileParam = params.get('file');
+    
+    if (fileParam) {
+      setIsLoading(true);
+      setLoadError(null);
+      
+      fetch(fileParam)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`Failed to load file: ${response.statusText}`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          // If it's an array of conversations, take the first one
+          const chatData = Array.isArray(data) ? data[0] : data;
+          setChatData(chatData);
+          setActiveTab("view");
+          
+          // Also save to session storage for consistency
+          sessionStorage.setItem("chat-viewer-json", JSON.stringify(data));
+        })
+        .catch(error => {
+          console.error('Error loading file:', error);
+          setLoadError(error.message);
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#f1f0e7] print:bg-white">
@@ -471,7 +507,18 @@ const ChatViewer: React.FC = () => {
             </div>
 
             <TabsContent value="json">
-              <JsonInput onValidJson={handleValidJson} />
+              {loadError && (
+                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-red-700">Error loading file: {loadError}</p>
+                </div>
+              )}
+              {isLoading ? (
+                <div className="p-8 text-center text-gray-500">
+                  Loading conversation file...
+                </div>
+              ) : (
+                <JsonInput onValidJson={handleValidJson} />
+              )}
             </TabsContent>
 
             <TabsContent value="view">
