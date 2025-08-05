@@ -150,6 +150,12 @@
     visibility: visible !important;
     opacity: 1 !important;
   }
+  
+  /* Print-specific message backgrounds - target by background gradient */
+  [class*="bg-gradient-to-t"] {
+    background: #f8f9fb !important; /* Very subtle light blue-gray that complements Claude's #f7f6f4 */
+    background-image: none !important;
+  }
 }
 
 /* Additional print media rule for Safari */
