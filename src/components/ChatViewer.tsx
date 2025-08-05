@@ -265,6 +265,7 @@ const getFileInfo = (
 const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
   const [showThinking, setShowThinking] = useState(false);
   const [showArtifactsInPrint, setShowArtifactsInPrint] = useState(true);
+  const [showColophonInPrint, setShowColophonInPrint] = useState(true);
   const [copySuccess, setCopySuccess] = useState(false);
 
   // Update window title when conversation is loaded
@@ -421,6 +422,15 @@ const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
             />
             Show artifacts in print
           </label>
+          <label className="flex items-center gap-2 text-sm text-gray-500">
+            <input
+              type="checkbox"
+              checked={showColophonInPrint}
+              onChange={(e) => setShowColophonInPrint(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            Show colophon in print
+          </label>
         </div>
 
         <div className="flex gap-2">
@@ -530,6 +540,26 @@ const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
           ))}
         </div>
       )}
+      
+      {/* Colophon - visible on screen and optionally in print */}
+      <div className={showColophonInPrint ? "mt-12 pt-8 border-t border-gray-200" : "mt-12 pt-8 border-t border-gray-200 print:hidden"}>
+        <div className="text-center text-sm text-gray-500">
+          <p className="mb-2">
+            Rendered by{" "}
+            <a
+              href="https://github.com/osteele/claude-chat-viewer"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 underline"
+            >
+              Claude Chat Viewer
+            </a>
+          </p>
+          <p className="text-xs">
+            An open-source tool for viewing Claude chat exports
+          </p>
+        </div>
+      </div>
     </div>
   );
 };
