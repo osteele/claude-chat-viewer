@@ -259,6 +259,17 @@ const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
   const [showThinking, setShowThinking] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
 
+  // Update window title when conversation is loaded
+  useEffect(() => {
+    const originalTitle = document.title;
+    document.title = data.name ? `${data.name} - Claude Chat Viewer` : 'Claude Chat Viewer';
+    
+    // Cleanup: restore original title when component unmounts
+    return () => {
+      document.title = originalTitle;
+    };
+  }, [data.name]);
+
   // Check if any message contains thinking segments
   const hasThinkingSegments = data.chat_messages.some((message) =>
     message.content.some(
@@ -415,6 +426,23 @@ const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
         <h1 className="text-xl font-semibold">
           {data.name || "Untitled Conversation"}
         </h1>
+        <div className="mt-2 text-sm text-gray-600">
+          <span>Created: {new Date(data.created_at).toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })}</span>
+          <span className="mx-2">•</span>
+          <span>Updated: {new Date(data.updated_at).toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })}</span>
+        </div>
       </div>
 
       {data.chat_messages.map((message) => (
@@ -438,6 +466,13 @@ const ChatViewer: React.FC = () => {
     setChatData(data);
     setActiveTab("view");
   };
+
+  // Update window title when no conversation is loaded
+  useEffect(() => {
+    if (!chatData) {
+      document.title = 'Claude Chat Viewer';
+    }
+  }, [chatData]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
