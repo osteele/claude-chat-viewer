@@ -89,3 +89,52 @@
     @apply bg-background text-foreground;
   }
 }
+
+@media print {
+  .page-break-before {
+    page-break-before: always;
+  }
+  
+  /* Ensure print-only content is visible */
+  .print\\:block {
+    display: block !important;
+  }
+  
+  .print\\:hidden {
+    display: none !important;
+  }
+  
+  /* Print artifacts appendix */
+  .print-only-appendix {
+    display: block !important;
+    page-break-before: always;
+  }
+  
+  /* Better print styling */
+  body {
+    background: white !important;
+  }
+  
+  pre {
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
+  }
+  
+  /* Prevent page breaks after message labels */
+  .message-label {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+  
+  /* Keep message content together with label */
+  .message-container {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+}
+
+@media screen {
+  .print-only-appendix {
+    display: none;
+  }
+}

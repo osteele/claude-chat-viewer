@@ -14,14 +14,17 @@ import mime from "mime-types";
 interface MessageCardProps {
   message: ChatMessage;
   showThinking: boolean;
+  artifactNumberMap: Map<string, number>;
 }
 
-const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking }) => {
+const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking, artifactNumberMap }) => {
   const isHuman = message.sender === "human";
 
   const renderContent = (content: ChatMessage["content"]) => {
     return content.map((item, index) => {
       if (item.type === "tool_use") {
+        const key = `${message.uuid}-tool-${item.input.id}`;
+        const artifactNum = artifactNumberMap.get(key) || 0;
         return (
           <div className="ml-4 inline-block">
             <Artifact
@@ -30,6 +33,7 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking }) => {
               content={item.input.content}
               identifier={item.input.id}
               artifactType={item.input.type}
+              artifactNumber={artifactNum}
             />
           </div>
         );
@@ -44,6 +48,8 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking }) => {
           <div key={index} className="max-w-none p-4">
             {segments.map((segment, i) => {
               if (segment.type === "artifact") {
+                const key = `${message.uuid}-artifact-${segment.identifier}`;
+                const artifactNum = artifactNumberMap.get(key) || 0;
                 return (
                   <Artifact
                     key={i}
@@ -51,6 +57,7 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking }) => {
                     content={segment.content}
                     identifier={segment.identifier}
                     artifactType={segment.artifactType}
+                    artifactNumber={artifactNum}
                   />
                 );
               }
@@ -118,7 +125,7 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking }) => {
   };
 
   return (
-    <>
+    <div className="message-container">
       {message.files && message.files.length > 0 && (
         <div className="mb-4 flex flex-wrap gap-2">
           {message.files.map((file, i) => (
@@ -168,7 +175,7 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking }) => {
       )}
 
       {/* Print version - positioned above */}
-      <div className={`text-sm hidden print:block`}>
+      <div className={`text-sm hidden print:block message-label mb-2`}>
         {isHuman ? "Human" : "Claude"}
       </div>
       <div
@@ -193,7 +200,7 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking }) => {
 
         <div>{renderContent(message.content)}</div>
       </div>
-    </>
+    </div>
   );
 };
 
@@ -257,6 +264,7 @@ const getFileInfo = (
 
 const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
   const [showThinking, setShowThinking] = useState(false);
+  const [showArtifactsInPrint, setShowArtifactsInPrint] = useState(true);
   const [copySuccess, setCopySuccess] = useState(false);
 
   // Update window title when conversation is loaded
@@ -269,6 +277,45 @@ const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
       document.title = originalTitle;
     };
   }, [data.name]);
+
+  // Collect all artifacts with their content and metadata
+  const artifacts: Array<{ title: string; content: string; type: string; language?: string; key: string }> = [];
+  const artifactNumberMap = new Map<string, number>();
+  
+  // Pre-collect all artifacts to assign consistent numbers
+  data.chat_messages.forEach((message) => {
+    message.content.forEach((item) => {
+      if (item.type === "tool_use") {
+        const key = `${message.uuid}-tool-${item.input.id}`;
+        if (!artifactNumberMap.has(key)) {
+          artifacts.push({
+            title: item.input.title,
+            content: item.input.content,
+            type: item.input.type,
+            language: item.input.language,
+            key
+          });
+          artifactNumberMap.set(key, artifacts.length);
+        }
+      } else if (item.type === "text") {
+        const segments = message.sender === "human" ? [] : parseMessage(item.text);
+        segments.forEach((segment) => {
+          if (segment.type === "artifact") {
+            const key = `${message.uuid}-artifact-${segment.identifier}`;
+            if (!artifactNumberMap.has(key)) {
+              artifacts.push({
+                title: segment.title,
+                content: segment.content,
+                type: segment.artifactType,
+                key
+              });
+              artifactNumberMap.set(key, artifacts.length);
+            }
+          }
+        });
+      }
+    });
+  });
 
   // Check if any message contains thinking segments
   const hasThinkingSegments = data.chat_messages.some((message) =>
@@ -366,6 +413,15 @@ const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
               Show thinking process
             </label>
           )}
+          <label className="flex items-center gap-2 text-sm text-gray-500">
+            <input
+              type="checkbox"
+              checked={showArtifactsInPrint}
+              onChange={(e) => setShowArtifactsInPrint(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            Show artifacts in print
+          </label>
         </div>
 
         <div className="flex gap-2">
@@ -450,8 +506,36 @@ const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
           key={message.uuid}
           message={message}
           showThinking={showThinking}
+          artifactNumberMap={artifactNumberMap}
         />
       ))}
+      
+      {/* Debug: Show artifact count on screen */}
+      <div className="text-xs text-gray-500 print:hidden">
+        Debug: Found {artifacts.length} artifacts, Show in print: {showArtifactsInPrint ? 'Yes' : 'No'}
+      </div>
+      
+      {/* Print-only artifacts appendix */}
+      {showArtifactsInPrint && artifacts.length > 0 && (
+        <div className="print-only-appendix mt-12">
+          <h2 className="text-2xl font-bold mb-6">Artifacts Appendix</h2>
+          {artifacts.map((artifact, index) => (
+            <div key={artifact.key} className="mb-8 border border-gray-300 rounded-lg p-4">
+              <h3 className="text-lg font-semibold mb-2">
+                Artifact {index + 1}: {artifact.title}
+              </h3>
+              {(artifact.type || artifact.language) && (
+                <div className="text-sm text-gray-600 mb-2">
+                  {artifact.type && `Type: ${artifact.type}`} {artifact.language && `(${artifact.language})`}
+                </div>
+              )}
+              <pre className="p-4 bg-gray-50 rounded overflow-x-auto text-sm" style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}>
+                <code>{artifact.content}</code>
+              </pre>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

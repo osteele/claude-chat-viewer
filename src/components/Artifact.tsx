@@ -6,9 +6,10 @@ interface ArtifactProps {
   content: string
   identifier: string
   artifactType: string
+  artifactNumber?: number
 }
 
-export function Artifact({ title, content, identifier: _identifier, artifactType: _artifactType }: ArtifactProps) {
+export function Artifact({ title, content, identifier: _identifier, artifactType: _artifactType, artifactNumber }: ArtifactProps) {
   const [isOpen, setIsOpen] = useState(false)
 
   return (
@@ -23,7 +24,10 @@ export function Artifact({ title, content, identifier: _identifier, artifactType
           </div>
           <div className="p-3">
             <div className="font-medium text-gray-900">{title}</div>
-            <div className="text-sm text-gray-500">Click to open component</div>
+            <div className="text-sm text-gray-500 print:hidden">Click to open component</div>
+            {artifactNumber && (
+              <div className="text-sm text-gray-500 hidden print:block">Artifact {artifactNumber} (see appendix)</div>
+            )}
           </div>
         </div>
       </div>
