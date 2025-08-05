@@ -402,17 +402,16 @@ const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
     <div className="space-y-6">
       <div className="flex justify-between items-center px-1 print:hidden">
         <div className="flex items-center gap-4">
-          {hasThinkingSegments && (
-            <label className="flex items-center gap-2 text-sm text-gray-500">
-              <input
-                type="checkbox"
-                checked={showThinking}
-                onChange={(e) => setShowThinking(e.target.checked)}
-                className="rounded border-gray-300"
-              />
-              Show thinking process
-            </label>
-          )}
+          <label className={`flex items-center gap-2 text-sm ${hasThinkingSegments ? 'text-gray-500' : 'text-gray-400'}`}>
+            <input
+              type="checkbox"
+              checked={showThinking}
+              onChange={(e) => setShowThinking(e.target.checked)}
+              disabled={!hasThinkingSegments}
+              className="rounded border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            />
+            Show thinking process {!hasThinkingSegments && '(no thinking segments in this conversation)'}
+          </label>
           <label className="flex items-center gap-2 text-sm text-gray-500">
             <input
               type="checkbox"
@@ -509,11 +508,6 @@ const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
           artifactNumberMap={artifactNumberMap}
         />
       ))}
-      
-      {/* Debug: Show artifact count on screen */}
-      <div className="text-xs text-gray-500 print:hidden">
-        Debug: Found {artifacts.length} artifacts, Show in print: {showArtifactsInPrint ? 'Yes' : 'No'}
-      </div>
       
       {/* Print-only artifacts appendix */}
       {showArtifactsInPrint && artifacts.length > 0 && (
