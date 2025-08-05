@@ -37,7 +37,7 @@ export function parseMessage(text: string): Segment[] {
   // Regex patterns
   const thinkingPattern = /<antThinking>([\s\S]*?)<\/antThinking>/g;
   const artifactPattern = /<antArtifact\s+identifier="([^"]+)"\s+type="([^"]+)"\s+title="([^"]+)">([\s\S]*?)<\/antArtifact>/g;
-  const codePattern = /```([\w-]+)(?::([^\n]+))?\n([\s\S]*?)```/g;
+  const codePattern = /```([\w-]*)(?::([^\n]+))?\n?([\s\S]*?)```/g;
 
   while (currentIndex < text.length) {
     // Find the next special tag
@@ -83,7 +83,7 @@ export function parseMessage(text: string): Segment[] {
     } else if (nextIndex === nextCodeIndex) {
       segments.push({
         type: "code",
-        language: codeMatch![1],
+        language: codeMatch![1] || "text",  // Default to "text" if no language specified
         path: codeMatch![2],
         content: codeMatch![3].trim(),
       });

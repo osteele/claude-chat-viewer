@@ -60,4 +60,35 @@ End`;
       { type: 'text', content: 'End' }
     ]);
   });
+
+  it('should parse code blocks with and without languages', () => {
+    const input = `Before
+\`\`\`javascript
+console.log('hello');
+\`\`\`
+Middle
+\`\`\`
+No language here
+\`\`\`
+After`;
+
+    const result = parseMessage(input);
+    expect(result).toEqual([
+      { type: 'text', content: 'Before' },
+      { 
+        type: 'code', 
+        language: 'javascript', 
+        path: undefined,
+        content: 'console.log(\'hello\');' 
+      },
+      { type: 'text', content: 'Middle' },
+      { 
+        type: 'code', 
+        language: 'text', 
+        path: undefined,
+        content: 'No language here' 
+      },
+      { type: 'text', content: 'After' }
+    ]);
+  });
 });
