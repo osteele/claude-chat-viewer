@@ -128,12 +128,15 @@
   
   /* Keep message labels with the following content (like "keep with next") */
   .message-label {
-    page-break-after: avoid;
-    break-after: avoid;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
   }
   
-  /* Remove the container rule that was preventing breaks within messages */
-  /* This allows message content to break across pages naturally */
+  /* Print-specific message backgrounds for human messages */
+  .human-message-print {
+    background: #f8f9fb !important;
+    background-image: none !important;
+  }
   
   /* Force visibility for all print elements */
   [class*="print:block"] {
@@ -148,11 +151,6 @@
     opacity: 1 !important;
   }
   
-  /* Print-specific message backgrounds - target by background gradient */
-  [class*="bg-gradient-to-t"] {
-    background: #f8f9fb !important; /* Very subtle light blue-gray that complements Claude's #f7f6f4 */
-    background-image: none !important;
-  }
 }
 
 /* Additional print media rule for Safari */

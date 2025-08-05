@@ -175,14 +175,14 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking, artifa
       )}
 
       {/* Print version - positioned above */}
-      <div className={`text-sm hidden print:block message-label mb-2`}>
+      <div className="text-sm hidden print:block message-label mb-2">
         {isHuman ? "Human" : "Claude"}
       </div>
       <div
         className={`mb-8 rounded-md overflow-hidden
       ${
         isHuman
-          ? "flex gap-2 bg-gradient-to-t from-[#e8e5d8] to-[#f5f4ee] border border-[#e8e7df]"
+          ? "flex gap-2 bg-gradient-to-t from-[#e8e5d8] to-[#f5f4ee] border border-[#e8e7df] human-message-print"
           : "bg-[#f7f6f4] border border-[#e9e7e1]"
       }`}
       >
