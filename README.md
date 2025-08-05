@@ -2,6 +2,8 @@
 
 A web application for viewing Claude chat conversations from exported JSON files. Renders Claude's chat JSON exports in a clean, readable format with support for code blocks, artifacts, and thinking process sections.
 
+![Screenshot](./docs/screenshot.png)
+
 ## Features
 
 - View Claude chat JSON exports in a readable format
