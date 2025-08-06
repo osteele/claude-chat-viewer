@@ -21,9 +21,12 @@ interface JsonInputProps {
   onConversationList: (conversations: ChatData[]) => void;
 }
 
-export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversationList }) => {
+export const JsonInput: React.FC<JsonInputProps> = ({
+  onValidJson,
+  onConversationList,
+}) => {
   const [jsonText, setJsonText] = useState(
-    sessionStorage.getItem(STORAGE_KEY) || ""
+    sessionStorage.getItem(STORAGE_KEY) || "",
   );
   const [options, setOptions] = useState<ConversationOption[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -101,7 +104,9 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
       parsedData = JSON.parse(jsonText);
     } catch (err) {
       if (err instanceof Error) {
-        setError(`Invalid JSON: ${err.message}. Please check your JSON syntax.`);
+        setError(
+          `Invalid JSON: ${err.message}. Please check your JSON syntax.`,
+        );
       } else {
         setError("Failed to parse JSON");
       }
@@ -111,28 +116,32 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
     processJsonData(parsedData);
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     setError(null);
 
     // Handle ZIP files
-    if (file.name.toLowerCase().endsWith('.zip')) {
+    if (file.name.toLowerCase().endsWith(".zip")) {
       try {
         const zip = await JSZip.loadAsync(file);
-        
+
         // Look for conversations.json in the ZIP
-        const conversationsFile = zip.file('conversations.json');
-        
+        const conversationsFile = zip.file("conversations.json");
+
         if (!conversationsFile) {
-          setError("No conversations.json found in the ZIP archive. Please make sure you're uploading a Claude export archive.");
+          setError(
+            "No conversations.json found in the ZIP archive. Please make sure you're uploading a Claude export archive.",
+          );
           return;
         }
 
-        const content = await conversationsFile.async('string');
+        const content = await conversationsFile.async("string");
         setJsonText(content);
-        
+
         try {
           const parsedData = JSON.parse(content);
           processJsonData(parsedData, true);
@@ -189,9 +198,9 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
   }, [jsonText]);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
       {/* Instructions Panel */}
-      <div className="lg:col-span-1">
+      <div className="lg:col-span-3">
         <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 h-fit">
           <div className="text-sm text-gray-700 prose prose-sm leading-relaxed">
             <Instructions />
@@ -205,7 +214,9 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
           <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
             <div className="flex justify-between items-center">
               <div>
-                <h3 className="text-sm font-medium text-gray-900">JSON Input</h3>
+                <h3 className="text-sm font-medium text-gray-900">
+                  JSON Input
+                </h3>
                 <p className="text-xs text-gray-500 mt-1">
                   Paste JSON or upload a file (.json or .zip)
                 </p>
