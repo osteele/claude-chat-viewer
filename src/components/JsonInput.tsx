@@ -131,51 +131,67 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson }) => {
   }, [jsonText]);
 
   return (
-    <div className="space-y-4">
-      <div className="text-sm text-gray-600 prose leading-loose">
-        <Instructions />
-      </div>
-
-      <textarea
-        className="w-full h-96 p-4 font-mono text-sm border rounded-lg focus:ring-2 focus:ring-blue-500"
-        value={jsonText}
-        onChange={(e) => setJsonText(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder="Paste JSON here..."
-      />
-
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="whitespace-pre-wrap font-mono text-sm">
-            {error}
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {options.length > 0 ? (
-        <div className="space-y-4">
-          <div className="text-sm font-medium">
-            Multiple conversations found. Please select one:
-          </div>
-          <div className="space-y-2">
-            {options.map((option) => (
-              <Button
-                key={option.uuid}
-                onClick={() => selectConversation(option)}
-                variant="outline"
-                className="w-full justify-start text-left"
-              >
-                {option.name}
-              </Button>
-            ))}
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* Instructions Panel */}
+      <div className="lg:col-span-1">
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 h-fit">
+          <div className="text-sm text-gray-700 prose prose-sm leading-relaxed">
+            <Instructions />
           </div>
         </div>
-      ) : (
-        <Button onClick={handleSubmit} className="w-full">
-          Load Conversation
-        </Button>
-      )}
+      </div>
+
+      {/* Input Panel */}
+      <div className="lg:col-span-2 space-y-4">
+        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+          <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+            <h3 className="text-sm font-medium text-gray-900">JSON Input</h3>
+            <p className="text-xs text-gray-500 mt-1">
+              Paste your Claude chat export here
+            </p>
+          </div>
+          <textarea
+            className="w-full h-96 p-4 font-mono text-sm border-0 focus:ring-2 focus:ring-blue-500 resize-none"
+            value={jsonText}
+            onChange={(e) => setJsonText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Paste JSON here..."
+          />
+        </div>
+
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="whitespace-pre-wrap font-mono text-sm">
+              {error}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {options.length > 0 ? (
+          <div className="space-y-4">
+            <div className="text-sm font-medium">
+              Multiple conversations found. Please select one:
+            </div>
+            <div className="grid gap-2">
+              {options.map((option) => (
+                <Button
+                  key={option.uuid}
+                  onClick={() => selectConversation(option)}
+                  variant="outline"
+                  className="justify-start text-left h-auto p-4"
+                >
+                  <div className="truncate">{option.name}</div>
+                </Button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <Button onClick={handleSubmit} className="w-full h-12 text-base">
+            Load Conversation
+          </Button>
+        )}
+      </div>
     </div>
   );
 };
