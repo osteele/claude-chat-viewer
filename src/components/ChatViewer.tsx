@@ -637,7 +637,29 @@ const ChatViewer: React.FC = () => {
   const [conversationList, setConversationList] = useState<ChatData[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isNavigating, setIsNavigating] = useState(false);
 
+  // Update URL to reflect current state
+  const updateURL = (tab: "json" | "view" | "browse", conversationId?: string) => {
+    const params = new URLSearchParams(window.location.search);
+    const fileParam = params.get('file');
+    
+    let newPath = window.location.pathname;
+    let newSearch = fileParam ? `?file=${fileParam}` : '';
+    
+    if (tab === "browse") {
+      newSearch += (newSearch ? '&' : '?') + 'tab=browse';
+    } else if (tab === "view" && conversationId) {
+      newSearch += (newSearch ? '&' : '?') + `tab=view&conversation=${conversationId}`;
+    }
+    
+    const newURL = newPath + newSearch;
+    
+    // Only push state if we're not navigating via popstate
+    if (!isNavigating) {
+      window.history.pushState({ tab, conversationId }, '', newURL);
+    }
+  };
 
   const handleValidJson = (data: ChatData) => {
     setChatData(data);
@@ -646,18 +668,21 @@ const ChatViewer: React.FC = () => {
       setConversationList(null);
     }
     setActiveTab("view");
+    updateURL("view", data.uuid);
   };
 
   const handleConversationList = (conversations: ChatData[]) => {
     setConversationList(conversations);
     setChatData(null);
     setActiveTab("browse");
+    updateURL("browse");
   };
 
   const handleSelectFromBrowser = (conversation: ChatData) => {
     setChatData(conversation);
     // Keep conversationList so user can navigate back
     setActiveTab("view");
+    updateURL("view", conversation.uuid);
     // Scroll to top when switching to conversation view
     window.scrollTo(0, 0);
   };
@@ -666,6 +691,7 @@ const ChatViewer: React.FC = () => {
     setConversationList(null);
     setChatData(null);
     setActiveTab("json");
+    updateURL("json");
   };
 
   // Update window title when no conversation is loaded
@@ -675,9 +701,45 @@ const ChatViewer: React.FC = () => {
     }
   }, [chatData]);
 
+  // Handle browser back/forward buttons
+  useEffect(() => {
+    const handlePopState = () => {
+      setIsNavigating(true);
+      
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab');
+      const conversationParam = params.get('conversation');
+      
+      if (tabParam === 'browse' && conversationList) {
+        setActiveTab('browse');
+        setChatData(null);
+        window.scrollTo(0, 0);
+      } else if (tabParam === 'view' && conversationParam && conversationList) {
+        // Find the conversation in the list
+        const conversation = conversationList.find(c => c.uuid === conversationParam);
+        if (conversation) {
+          setChatData(conversation);
+          setActiveTab('view');
+          window.scrollTo(0, 0);
+        }
+      } else {
+        // Default to import tab
+        setActiveTab('json');
+        window.scrollTo(0, 0);
+      }
+      
+      setIsNavigating(false);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [conversationList]);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const fileParam = params.get('file');
+    const tabParam = params.get('tab');
+    const conversationParam = params.get('conversation');
     
     if (fileParam) {
       setIsLoading(true);
@@ -725,7 +787,19 @@ const ChatViewer: React.FC = () => {
             
             // Show conversation browser with valid conversations
             setConversationList(validConversations);
-            setActiveTab("browse");
+            
+            // Check if we should navigate to a specific conversation
+            if (tabParam === 'view' && conversationParam) {
+              const conversation = validConversations.find(c => c.uuid === conversationParam);
+              if (conversation) {
+                setChatData(conversation);
+                setActiveTab("view");
+              } else {
+                setActiveTab("browse");
+              }
+            } else {
+              setActiveTab("browse");
+            }
             return;
           }
           
@@ -752,6 +826,9 @@ const ChatViewer: React.FC = () => {
             <button
               onClick={() => {
                 setActiveTab("json");
+                setChatData(null);
+                setConversationList(null);
+                updateURL("json");
                 window.scrollTo(0, 0);
               }}
               className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
@@ -766,6 +843,8 @@ const ChatViewer: React.FC = () => {
               <button
                 onClick={() => {
                   setActiveTab("browse");
+                  setChatData(null);
+                  updateURL("browse");
                   window.scrollTo(0, 0);
                 }}
                 className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
@@ -779,8 +858,11 @@ const ChatViewer: React.FC = () => {
             )}
             <button
               onClick={() => {
-                setActiveTab("view");
-                window.scrollTo(0, 0);
+                if (chatData) {
+                  setActiveTab("view");
+                  updateURL("view", chatData.uuid);
+                  window.scrollTo(0, 0);
+                }
               }}
               disabled={!chatData}
               className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
