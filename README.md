@@ -124,6 +124,10 @@ Visit http://localhost:5173 in your browser.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
 
+## More Tools
+
+Check out my [other web applications](https://osteele.com/software/web-apps/) and [AI & LLM tools](https://osteele.com/topics/ai).
+
 ## Acknowledgements
 
 Inspired by Simon Willison's [Convert Claude JSON to
