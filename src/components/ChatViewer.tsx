@@ -6,7 +6,7 @@ import { ChatData, ChatMessage } from "../schemas/chat";
 import { Artifact } from "./Artifact";
 import { CodeBlock } from "./CodeBlock";
 import { JsonInput } from "./JsonInput";
-import { chatToText, chatToHtml } from "../lib/utils";
+import { chatToText, chatToHtml, chatToMarkdown } from "../lib/utils";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import mime from "mime-types";
@@ -26,9 +26,8 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking, artifa
         const key = `${message.uuid}-tool-${item.input.id}`;
         const artifactNum = artifactNumberMap.get(key) || 0;
         return (
-          <div className="ml-4 inline-block">
+          <div key={index} className="ml-4 inline-block">
             <Artifact
-              key={index}
               title={item.input.title}
               content={item.input.content}
               identifier={item.input.id}
@@ -264,9 +263,10 @@ const getFileInfo = (
 
 const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
   const [showThinking, setShowThinking] = useState(false);
-  const [showArtifactsInPrint, setShowArtifactsInPrint] = useState(true);
-  const [showColophonInPrint, setShowColophonInPrint] = useState(true);
+  const [showArtifactsInExport, setShowArtifactsInExport] = useState(true);
+  const [showColophonInExport, setShowColophonInExport] = useState(true);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [downloadSuccess, setDownloadSuccess] = useState(false);
 
   // Update window title when conversation is loaded
   useEffect(() => {
@@ -326,6 +326,31 @@ const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
         parseMessage(item.text).some((segment) => segment.type === "thinking")
     )
   );
+
+  const handleDownloadMarkdown = () => {
+    try {
+      const markdown = chatToMarkdown(data, {
+        showThinking,
+        showArtifacts: showArtifactsInExport,
+        showColophon: showColophonInExport
+      });
+      
+      const blob = new Blob([markdown], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${data.name || 'untitled-conversation'}.md`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      setDownloadSuccess(true);
+      setTimeout(() => setDownloadSuccess(false), 2000);
+    } catch (err) {
+      console.error('Failed to download markdown:', err);
+    }
+  };
 
   const handleCopy = async () => {
     try {
@@ -416,24 +441,65 @@ const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
           <label className="flex items-center gap-2 text-sm text-gray-500">
             <input
               type="checkbox"
-              checked={showArtifactsInPrint}
-              onChange={(e) => setShowArtifactsInPrint(e.target.checked)}
+              checked={showArtifactsInExport}
+              onChange={(e) => setShowArtifactsInExport(e.target.checked)}
               className="rounded border-gray-300"
             />
-            Show artifacts in print
+            Include artifacts
           </label>
           <label className="flex items-center gap-2 text-sm text-gray-500">
             <input
               type="checkbox"
-              checked={showColophonInPrint}
-              onChange={(e) => setShowColophonInPrint(e.target.checked)}
+              checked={showColophonInExport}
+              onChange={(e) => setShowColophonInExport(e.target.checked)}
               className="rounded border-gray-300"
             />
-            Show colophon in print
+            Include colophon
           </label>
         </div>
 
         <div className="flex gap-2">
+          <button
+            onClick={() => window.print()}
+            className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 bg-white rounded-md border border-gray-200 hover:border-gray-300 transition-colors"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+              />
+            </svg>
+            Print
+          </button>
+          
+          <button
+            onClick={handleDownloadMarkdown}
+            className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 bg-white rounded-md border border-gray-200 hover:border-gray-300 transition-colors"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+            {downloadSuccess ? "Downloaded!" : "Download Markdown"}
+          </button>
           {hasArtifacts && (
             <button
               onClick={handleDownloadArtifacts}
@@ -520,7 +586,7 @@ const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
       ))}
       
       {/* Print-only artifacts appendix */}
-      {showArtifactsInPrint && artifacts.length > 0 && (
+      {showArtifactsInExport && artifacts.length > 0 && (
         <div 
           className="print-only-appendix mt-12"
           data-print-only="true"
@@ -549,7 +615,7 @@ const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
       )}
       
       {/* Colophon - visible on screen and optionally in print */}
-      <div className={showColophonInPrint ? "mt-12 pt-8 border-t border-gray-200" : "mt-12 pt-8 border-t border-gray-200 print:hidden"}>
+      <div className={showColophonInExport ? "mt-12 pt-8 border-t border-gray-200" : "mt-12 pt-8 border-t border-gray-200 print:hidden"}>
         <div className="text-center text-sm text-gray-500">
           <p className="mb-2">
             Rendered by{" "}

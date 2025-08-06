@@ -1,6 +1,7 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { ChatData, ChatMessage } from "../schemas/chat";
+import { parseMessage } from "./messageParser";
 import Prism from "./prism-languages";
 
 export function cn(...inputs: ClassValue[]) {
@@ -55,12 +56,24 @@ export function chatToHtml(data: ChatData): string {
                 (item.text ?? "")
                   // Convert code blocks with language
                   .replace(/```(\w+)?\n([\s\S]*?)```/g, (_, lang, code) => {
-                    const highlightedCode = Prism.highlight(
-                      code.trim(),
-                      Prism.languages[lang] || Prism.languages.plaintext,
-                      lang
-                    );
-                    return `<pre class="language-${lang}"><code class="language-${lang}">${highlightedCode}</code></pre>`;
+                    const language = lang || "text";
+                    let highlightedCode;
+                    try {
+                      const grammar = Prism.languages[language] || Prism.languages.plaintext || Prism.languages.text || {};
+                      highlightedCode = Prism.highlight(
+                        code.trim(),
+                        grammar,
+                        language
+                      );
+                    } catch (error) {
+                      // If highlighting fails, just escape the HTML
+                      console.warn(`Failed to highlight code for language: ${language}`, error);
+                      highlightedCode = code.trim()
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;');
+                    }
+                    return `<pre class="language-${language}"><code class="language-${language}">${highlightedCode}</code></pre>`;
                   })
                   // Convert inline code
                   .replace(
@@ -74,13 +87,25 @@ export function chatToHtml(data: ChatData): string {
                   // Convert newlines
                   .replace(/\n/g, "<br>")
               );
-            } else if (item.type === "tool_use" && item.language) {
-              const highlightedCode = Prism.highlight(
-                item.text?.trim() || "",
-                Prism.languages[item.language] || Prism.languages.plaintext,
-                item.language
-              );
-              return `<div><strong>${item.input?.title}</strong><pre class="language-${item.language}"><code class="language-${item.language}">${highlightedCode}</code></pre></div>`;
+            } else if (item.type === "tool_use" && item.input) {
+              const language = item.input.language || "text";
+              const content = item.input.content || "";
+              let highlightedCode;
+              try {
+                const grammar = Prism.languages[language] || Prism.languages.plaintext || Prism.languages.text || {};
+                highlightedCode = Prism.highlight(
+                  content.trim(),
+                  grammar,
+                  language
+                );
+              } catch (error) {
+                console.warn(`Failed to highlight code for language: ${language}`, error);
+                highlightedCode = content.trim()
+                  .replace(/&/g, '&amp;')
+                  .replace(/</g, '&lt;')
+                  .replace(/>/g, '&gt;');
+              }
+              return `<div><strong>${item.input.title}</strong><pre class="language-${language}"><code class="language-${language}">${highlightedCode}</code></pre></div>`;
             }
             return "";
           }
@@ -169,6 +194,76 @@ function buildLineMap(json: string): LineMap {
   }
 
   return lineMap;
+}
+
+interface MarkdownOptions {
+  showThinking?: boolean;
+  showArtifacts?: boolean;
+  showColophon?: boolean;
+}
+
+export function chatToMarkdown(data: ChatData, options: MarkdownOptions = {}): string {
+  const { showThinking = false, showArtifacts = true, showColophon = true } = options;
+  
+  let markdown = `# ${data.name || "Untitled Conversation"}\n\n`;
+  
+  // Add metadata
+  markdown += `**Created:** ${new Date(data.created_at).toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })}\n`;
+  
+  markdown += `**Updated:** ${new Date(data.updated_at).toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })}\n\n`;
+  
+  markdown += "---\n\n";
+  
+  // Add messages
+  data.chat_messages.forEach((message: ChatMessage) => {
+    const sender = message.sender === "human" ? "**Human**" : "**Claude**";
+    markdown += `## ${sender}\n\n`;
+    
+    message.content.forEach((item) => {
+      if (item.type === "text" && item.text) {
+        const segments = message.sender === "human" ? [{ type: "text" as const, content: item.text }] : parseMessage(item.text);
+        
+        segments.forEach(segment => {
+          if (segment.type === "text") {
+            markdown += segment.content + "\n\n";
+          } else if (segment.type === "thinking" && showThinking) {
+            markdown += `> 💭 **Thinking Process**\n> ${segment.content.split('\n').join('\n> ')}\n\n`;
+          } else if (segment.type === "code") {
+            const lang = segment.language || "";
+            markdown += `\`\`\`${lang}\n${segment.content}\n\`\`\`\n\n`;
+          } else if (segment.type === "artifact" && showArtifacts) {
+            markdown += `### 📄 Artifact: ${segment.title}\n\n`;
+            markdown += `\`\`\`${segment.artifactType || ""}\n${segment.content}\n\`\`\`\n\n`;
+          }
+        });
+      } else if (item.type === "tool_use" && item.input && showArtifacts) {
+        markdown += `### 📄 Artifact: ${item.input.title}\n\n`;
+        const lang = item.input.language || item.input.type || "";
+        markdown += `\`\`\`${lang}\n${item.input.content}\n\`\`\`\n\n`;
+      }
+    });
+  });
+  
+  // Add colophon
+  if (showColophon) {
+    markdown += "---\n\n";
+    markdown += "*Rendered by [Claude Chat Viewer](https://github.com/osteele/claude-chat-viewer)*\n";
+    markdown += "*An open-source tool for viewing Claude chat exports*\n";
+  }
+  
+  return markdown;
 }
 
 export function formatValidationErrors(
