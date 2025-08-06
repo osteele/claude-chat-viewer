@@ -168,6 +168,97 @@
   }
 }
 
+/* Instructions Panel Typography */
+.instructions-panel {
+  @apply text-gray-700;
+}
+
+.instructions-panel h1 {
+  @apply text-3xl font-bold text-gray-900 mb-6 tracking-tight;
+  background: linear-gradient(135deg, #1e40af 0%, #7c3aed 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.instructions-panel h2 {
+  @apply text-xl font-semibold text-gray-800 mt-8 mb-6 pb-2;
+  position: relative;
+}
+
+.instructions-panel h2::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  border-radius: 2px;
+}
+
+.instructions-panel h3 {
+  @apply text-lg font-semibold text-gray-800 mt-6 mb-4 flex items-center gap-2;
+}
+
+/* Easiest badge */
+.easiest-badge {
+  @apply inline-block ml-2 px-2 py-1 text-xs font-semibold bg-green-100 text-green-700 rounded-full align-middle;
+}
+
+/* Remove the bullet points since we're using "Option A/B/C" labels now */
+
+.instructions-panel > p:first-of-type {
+  @apply text-base text-gray-600 leading-relaxed mb-6;
+}
+
+.instructions-panel ol,
+.instructions-panel ul {
+  @apply space-y-3 my-4;
+}
+
+.instructions-panel ol li {
+  @apply pl-2 text-gray-600 leading-relaxed;
+}
+
+.instructions-panel ol li strong {
+  @apply text-gray-800 font-semibold;
+}
+
+.instructions-panel li::marker {
+  @apply text-blue-500 font-bold;
+}
+
+.instructions-panel code {
+  @apply bg-gray-100 text-gray-800 px-2 py-1 rounded text-sm font-mono border border-gray-200;
+}
+
+.instructions-panel p strong {
+  @apply font-semibold text-gray-800;
+}
+
+.instructions-panel p em {
+  @apply italic text-gray-700;
+}
+
+.instructions-panel a {
+  @apply text-blue-600 hover:text-blue-800 underline decoration-blue-200 hover:decoration-blue-400 transition-colors duration-200 font-medium;
+}
+
+.instructions-panel > p:last-child {
+  @apply mt-6 pt-6 border-t border-blue-100;
+}
+
+/* Note and special sections styling */
+.instructions-panel p > strong:first-child {
+  @apply text-gray-800;
+}
+
+/* Highlight paragraphs starting with bold text */
+.instructions-panel p:has(> strong:first-child) {
+  @apply bg-white/70 p-4 rounded-lg border border-blue-100 my-6;
+}
+
 /* Custom checkbox styles */
 input[type="checkbox"] {
   cursor: pointer;

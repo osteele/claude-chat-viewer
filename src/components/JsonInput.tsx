@@ -201,8 +201,8 @@ export const JsonInput: React.FC<JsonInputProps> = ({
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
       {/* Instructions Panel */}
       <div className="lg:col-span-3">
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 h-fit">
-          <div className="text-sm text-gray-700 prose prose-sm leading-relaxed">
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-8 h-fit shadow-sm">
+          <div className="prose prose-slate prose-sm max-w-none instructions-panel">
             <Instructions />
           </div>
         </div>
