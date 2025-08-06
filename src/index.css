@@ -167,3 +167,25 @@
     display: none;
   }
 }
+
+/* Custom checkbox styles */
+input[type="checkbox"] {
+  cursor: pointer;
+}
+
+input[type="checkbox"]:disabled {
+  cursor: not-allowed;
+}
+
+/* Button group hover effects */
+.button-group:hover button {
+  border-color: theme('colors.gray.300');
+}
+
+/* Responsive utilities */
+@media (max-width: 768px) {
+  .control-panel-responsive {
+    flex-direction: column;
+    gap: 1rem;
+  }
+}

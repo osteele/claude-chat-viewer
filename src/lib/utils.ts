@@ -49,7 +49,7 @@ export function chatToHtml(data: ChatData): string {
             type: string;
             text?: string;
             language?: string;
-            input?: { title: string; content: string };
+            input?: { title: string; content: string; language?: string };
           }) => {
             if (item.type === "text") {
               return (
