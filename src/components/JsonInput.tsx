@@ -5,6 +5,7 @@ import { useEffect, useState, useRef } from "react";
 import Instructions from "../content/instructions.mdx";
 import { ChatData, ChatDataSchema } from "../schemas/chat";
 import { formatValidationErrors } from "../lib/utils";
+import JSZip from "jszip";
 
 const STORAGE_KEY = "chat-viewer-json";
 const MAX_CACHE_SIZE = 100000; // Don't cache files larger than ~100KB
@@ -110,10 +111,49 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
     processJsonData(parsedData);
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    setError(null);
+
+    // Handle ZIP files
+    if (file.name.toLowerCase().endsWith('.zip')) {
+      try {
+        const zip = await JSZip.loadAsync(file);
+        
+        // Look for conversations.json in the ZIP
+        const conversationsFile = zip.file('conversations.json');
+        
+        if (!conversationsFile) {
+          setError("No conversations.json found in the ZIP archive. Please make sure you're uploading a Claude export archive.");
+          return;
+        }
+
+        const content = await conversationsFile.async('string');
+        setJsonText(content);
+        
+        try {
+          const parsedData = JSON.parse(content);
+          processJsonData(parsedData, true);
+        } catch (err) {
+          if (err instanceof Error) {
+            setError(`Invalid JSON in ZIP file: ${err.message}`);
+          } else {
+            setError("Failed to parse conversations.json from ZIP");
+          }
+        }
+      } catch (err) {
+        if (err instanceof Error) {
+          setError(`Error reading ZIP file: ${err.message}`);
+        } else {
+          setError("Failed to read ZIP file");
+        }
+      }
+      return;
+    }
+
+    // Handle JSON files (existing code)
     const reader = new FileReader();
     reader.onload = (e) => {
       const content = e.target?.result as string;
@@ -167,7 +207,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
               <div>
                 <h3 className="text-sm font-medium text-gray-900">JSON Input</h3>
                 <p className="text-xs text-gray-500 mt-1">
-                  Paste your Claude chat export here or upload a file
+                  Paste JSON or upload a file (.json or .zip)
                 </p>
               </div>
               <Button
@@ -186,12 +226,12 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
             value={jsonText}
             onChange={(e) => setJsonText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Paste JSON here or click 'Upload File' to select a conversations.json file..."
+            placeholder="Paste JSON here or click 'Upload File' to select a .json or .zip file..."
           />
           <input
             ref={fileInputRef}
             type="file"
-            accept=".json"
+            accept=".json,.zip"
             onChange={handleFileUpload}
             className="hidden"
           />

@@ -7,6 +7,7 @@ A web application for viewing Claude chat conversations from exported JSON files
 ## Features
 
 - View Claude chat JSON exports in a readable format
+- Direct ZIP archive upload - no extraction needed
 - Browse and select from multiple conversations (conversations.json support)
 - Support for code blocks with syntax highlighting
 - Download all code and artifacts as a zip file
@@ -27,16 +28,22 @@ Visit [tools.osteele.com/claude-chat-viewer](https://tools.osteele.com/claude-ch
 3. Paste your JSON or select a file
 4. View your conversation in a clean, readable format
 
-### Viewing Multiple Conversations (conversations.json)
+### Viewing Multiple Conversations
 
-The viewer now supports the `conversations.json` file from Claude's full data export:
+The viewer supports Claude's full data export in two ways:
 
+#### Option 1: Direct ZIP Upload (Recommended)
 1. Request a data export from Claude (Settings → Account → Request Export)
-2. Extract the downloaded archive
-3. Upload the `conversations.json` file using the "Upload File" button
-4. Browse through all your conversations with summaries (when available)
+2. Download the ZIP archive when ready
+3. Click "Upload File" and select the ZIP directly - no extraction needed!
+4. Browse through all your conversations with summaries
 5. Select any conversation to view in detail
 6. Use the header navigation to switch between conversations
+
+#### Option 2: Upload conversations.json
+1. Extract the Claude export ZIP
+2. Upload the `conversations.json` file using the "Upload File" button
+3. Browse and select from your conversations
 
 ### Loading Files via URL Parameter
 
