@@ -9,6 +9,11 @@ A web application for viewing Claude chat conversations from exported JSON files
 - View Claude chat JSON exports in a readable format
 - Direct ZIP archive upload - no extraction needed
 - Browse and select from multiple conversations (conversations.json support)
+- Advanced search and filtering for conversations:
+  - Search by title/summary or full conversation text
+  - Regular expression (regex) pattern matching
+  - Case-sensitive search option
+  - Real-time filtering with result counter
 - Support for code blocks with syntax highlighting
 - Download all code and artifacts as a zip file
 - Copy entire conversations with formatting preserved
@@ -44,6 +49,16 @@ The viewer supports Claude's full data export in two ways:
 1. Extract the Claude export ZIP
 2. Upload the `conversations.json` file using the "Upload File" button
 3. Browse and select from your conversations
+
+### Searching Conversations
+
+When browsing multiple conversations, you can use the search feature to quickly find specific conversations:
+
+- **Search by Title & Summary**: Quick search through conversation names and summaries
+- **Search Full Text**: Deep search through all messages in conversations
+- **Regex Mode**: Use regular expressions for advanced pattern matching (e.g., `\d{4}-\d{2}-\d{2}` for dates)
+- **Case Sensitive**: Toggle for exact case matching
+- **Clear Button**: Click the X button to quickly clear your search
 
 ### Loading Files via URL Parameter
 
