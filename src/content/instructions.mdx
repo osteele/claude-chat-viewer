@@ -1,10 +1,19 @@
 # Claude Chat Viewer
 
-Paste a [Claude chat](https://www.anthropic.com/news/artifacts) JSON export file
-here to see the conversation in a readable format.
+View your Claude conversations in a clean, readable format.
 
-See [Convert Claude JSON to Markdown] for instructions on how to find the JSON
-for a Claude chat, so that you can paste it here.
+## Two ways to import:
+
+### Individual Conversation
+Export a single chat from Claude and paste the JSON here.
+See [Convert Claude JSON to Markdown] for instructions on finding the JSON.
+
+### All Conversations (conversations.json)
+1. Go to Claude Settings → Account
+2. Click "Request Export" to get all your data
+3. Extract the downloaded archive
+4. Upload the `conversations.json` file using the button above
+5. Browse and select from all your conversations
 
 **Note**: Due to technical limitations in the Anthropic API, the app cannot
 currently render image attachments. Also, it does not currently render LaTeX or

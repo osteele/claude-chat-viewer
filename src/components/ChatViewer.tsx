@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { parseMessage } from "../lib/messageParser";
-import { ChatData, ChatMessage } from "../schemas/chat";
+import { ChatData, ChatMessage, ChatDataSchema } from "../schemas/chat";
 import { Artifact } from "./Artifact";
 import { CodeBlock } from "./CodeBlock";
 import { JsonInput } from "./JsonInput";
+import { ConversationBrowser } from "./ConversationBrowser";
 import { chatToText, chatToHtml, chatToMarkdown } from "../lib/utils";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -285,6 +286,17 @@ const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
   const artifactNumberMap = new Map<string, number>();
   
   // Pre-collect all artifacts to assign consistent numbers
+  if (!data.chat_messages) {
+    return (
+      <div className="p-8 text-center">
+        <div className="text-red-600 mb-2">Error: Invalid conversation data</div>
+        <div className="text-gray-600 text-sm">
+          The loaded data does not contain valid chat messages. Please ensure you're loading a properly formatted conversation file.
+        </div>
+      </div>
+    );
+  }
+
   data.chat_messages.forEach((message) => {
     message.content.forEach((item) => {
       if (item.type === "tool_use") {
@@ -620,14 +632,40 @@ const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
 };
 
 const ChatViewer: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<"json" | "view">("json");
+  const [activeTab, setActiveTab] = useState<"json" | "view" | "browse">("json");
   const [chatData, setChatData] = useState<ChatData | null>(null);
+  const [conversationList, setConversationList] = useState<ChatData[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+
   const handleValidJson = (data: ChatData) => {
     setChatData(data);
+    // Only clear conversation list if we're loading a single conversation directly
+    if (!conversationList) {
+      setConversationList(null);
+    }
     setActiveTab("view");
+  };
+
+  const handleConversationList = (conversations: ChatData[]) => {
+    setConversationList(conversations);
+    setChatData(null);
+    setActiveTab("browse");
+  };
+
+  const handleSelectFromBrowser = (conversation: ChatData) => {
+    setChatData(conversation);
+    // Keep conversationList so user can navigate back
+    setActiveTab("view");
+    // Scroll to top when switching to conversation view
+    window.scrollTo(0, 0);
+  };
+
+  const handleBackToInput = () => {
+    setConversationList(null);
+    setChatData(null);
+    setActiveTab("json");
   };
 
   // Update window title when no conversation is loaded
@@ -648,18 +686,52 @@ const ChatViewer: React.FC = () => {
       fetch(fileParam)
         .then(response => {
           if (!response.ok) {
-            throw new Error(`Failed to load file: ${response.statusText}`);
+            throw new Error(`Failed to load file "${fileParam}": ${response.status} ${response.statusText}. Make sure the file path is correct and the file is accessible.`);
           }
           return response.json();
         })
         .then(data => {
-          // If it's an array of conversations, take the first one
-          const chatData = Array.isArray(data) ? data[0] : data;
-          setChatData(chatData);
-          setActiveTab("view");
+          // Don't cache query parameter data to avoid storage issues with large files
           
-          // Also save to session storage for consistency
-          sessionStorage.setItem("chat-viewer-json", JSON.stringify(data));
+          // Check if it's a conversations.json file (array format)
+          if (Array.isArray(data)) {
+            if (data.length === 0) {
+              setLoadError("The conversations file is empty.");
+              return;
+            }
+            
+            if (data.length === 1) {
+              // Single conversation in array - load it directly
+              setChatData(data[0]);
+              setActiveTab("view");
+              return;
+            }
+            
+            // Multiple conversations - validate each as ChatData and show browser
+            const validConversations = data.filter(conversation => {
+              const result = ChatDataSchema.safeParse(conversation);
+              return result.success;
+            });
+            
+            if (validConversations.length === 0) {
+              setLoadError("No valid conversations found in the file.");
+              return;
+            }
+            
+            // Only log a summary if some conversations were invalid
+            if (validConversations.length < data.length) {
+              console.info(`Loaded ${validConversations.length} of ${data.length} conversations`);
+            }
+            
+            // Show conversation browser with valid conversations
+            setConversationList(validConversations);
+            setActiveTab("browse");
+            return;
+          }
+          
+          // Single conversation object
+          setChatData(data);
+          setActiveTab("view");
         })
         .catch(error => {
           console.error('Error loading file:', error);
@@ -678,7 +750,10 @@ const ChatViewer: React.FC = () => {
         <div className="max-w-4xl mx-auto px-6 py-1.5 flex justify-between items-center">
           <div className="flex items-center gap-1">
             <button
-              onClick={() => setActiveTab("json")}
+              onClick={() => {
+                setActiveTab("json");
+                window.scrollTo(0, 0);
+              }}
               className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
                 activeTab === "json"
                   ? "text-gray-900 bg-white/80 shadow-xs"
@@ -687,8 +762,26 @@ const ChatViewer: React.FC = () => {
             >
               1. Import
             </button>
+            {conversationList && (
+              <button
+                onClick={() => {
+                  setActiveTab("browse");
+                  window.scrollTo(0, 0);
+                }}
+                className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                  activeTab === "browse"
+                    ? "text-gray-900 bg-white/80 shadow-xs"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                2. Browse ({conversationList.length})
+              </button>
+            )}
             <button
-              onClick={() => setActiveTab("view")}
+              onClick={() => {
+                setActiveTab("view");
+                window.scrollTo(0, 0);
+              }}
               disabled={!chatData}
               className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
                 activeTab === "view"
@@ -698,7 +791,7 @@ const ChatViewer: React.FC = () => {
                   : "text-gray-300 cursor-not-allowed"
               }`}
             >
-              2. View{chatData ? ` • ${chatData.name || "Untitled"}` : ""}
+              {conversationList ? "3." : "2."} View{chatData ? ` • ${chatData.name || "Untitled"}` : ""}
             </button>
           </div>
           <a
@@ -717,25 +810,27 @@ const ChatViewer: React.FC = () => {
       
       <div className="max-w-4xl mx-auto px-6 py-8">
         <div className="print:hidden">
-
-          {activeTab === "json" ? (
-            <>
-              {loadError && (
-                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
-                  <p className="text-red-700">Error loading file: {loadError}</p>
-                </div>
-              )}
-              {isLoading ? (
-                <div className="p-8 text-center text-gray-500">
-                  Loading conversation file...
-                </div>
-              ) : (
-                <JsonInput onValidJson={handleValidJson} />
-              )}
-            </>
-          ) : (
-            chatData && <ConversationView data={chatData} />
+          {loadError && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-red-700">Error loading file: {loadError}</p>
+            </div>
           )}
+          
+          {isLoading ? (
+            <div className="p-8 text-center text-gray-500">
+              Loading conversation file...
+            </div>
+          ) : activeTab === "json" ? (
+            <JsonInput onValidJson={handleValidJson} onConversationList={handleConversationList} />
+          ) : activeTab === "browse" && conversationList ? (
+            <ConversationBrowser
+              conversations={conversationList}
+              onSelectConversation={handleSelectFromBrowser}
+              onBack={handleBackToInput}
+            />
+          ) : activeTab === "view" && chatData ? (
+            <ConversationView data={chatData} />
+          ) : null}
         </div>
 
         {/* Show conversation view directly when printing */}

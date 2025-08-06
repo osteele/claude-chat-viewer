@@ -44,6 +44,21 @@ const ContentItemSchema = z.discriminatedUnion("type", [
   ToolResultSchema,
 ]);
 
+// Content schema for conversations.json format (with timestamps and citations)
+const ConversationContentItemSchema = z.object({
+  type: z.literal("text"),
+  text: z.string(),
+  start_timestamp: z.string().nullable().optional(),
+  stop_timestamp: z.string().nullable().optional(),
+  citations: z.array(z.any()).optional(),
+}).passthrough();
+
+const ConversationContentSchema = z.union([
+  ConversationContentItemSchema,
+  ToolUseSchema,
+  ToolResultSchema,
+]);
+
 const ThumbnailAssetSchema = z
   .object({
     url: z.string(),
@@ -91,6 +106,21 @@ const ChatMessageSchema = z.object({
   parent_message_uuid: z.string().optional(),
 });
 
+// Message schema for conversations.json format
+const ConversationMessageSchema = z.object({
+  uuid: z.string(),
+  text: z.string(),
+  content: z.array(ConversationContentSchema),
+  sender: z.enum(["human", "assistant"]),
+  created_at: z.string(),
+  updated_at: z.string(),
+  attachments: z.array(z.any()).optional(),
+  files: z.array(z.any()).optional(),
+  index: z.number().default(0), // Default to 0 if not present
+  truncated: z.boolean().default(false),
+  parent_message_uuid: z.string().optional(),
+}).passthrough();
+
 const SettingsSchema = z.object({
   preview_feature_uses_artifacts: z.boolean(),
   preview_feature_uses_latex: z.boolean(),
@@ -99,7 +129,8 @@ const SettingsSchema = z.object({
   enabled_turmeric: z.boolean().optional(),
 });
 
-export const ChatDataSchema = z.object({
+// Schema for individual conversation exports
+const IndividualChatSchema = z.object({
   uuid: z.string(),
   name: z.string(),
   summary: z.string(),
@@ -114,11 +145,40 @@ export const ChatDataSchema = z.object({
   project_uuid: z.string().optional(),
   project: z.any().optional(),
   workspace_id: z.string().optional(),
-});
+}).passthrough(); // Allow additional fields
+
+// Schema for conversations.json items
+const ConversationItemSchema = z.object({
+  uuid: z.string(),
+  name: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  account: z.object({ 
+    uuid: z.string() 
+  }).passthrough(),
+  chat_messages: z.array(ConversationMessageSchema),
+  // Optional fields that may or may not be present
+  summary: z.string().optional(),
+  settings: SettingsSchema.optional(),
+  is_starred: z.boolean().optional(),
+  current_leaf_message_uuid: z.string().optional(),
+  conversation_id: z.string().optional(),
+  model: z.string().optional(),
+  project_uuid: z.string().optional(),
+  project: z.any().optional(),
+  workspace_id: z.string().optional(),
+}).passthrough(); // Allow additional fields
+
+// Union type that accepts both formats
+export const ChatDataSchema = z.union([
+  IndividualChatSchema,
+  ConversationItemSchema,
+]);
+
 
 // Export inferred types
 export type ChatData = z.infer<typeof ChatDataSchema>;
-export type ChatMessage = z.infer<typeof ChatMessageSchema>;
-export type ContentItem = z.infer<typeof ContentItemSchema>;
+export type ChatMessage = z.infer<typeof ChatMessageSchema> | z.infer<typeof ConversationMessageSchema>;
+export type ContentItem = z.infer<typeof ContentItemSchema> | z.infer<typeof ConversationContentSchema>;
 export type FileData = z.infer<typeof FileSchema>;
 export type Settings = z.infer<typeof SettingsSchema>;

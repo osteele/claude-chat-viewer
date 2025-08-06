@@ -7,6 +7,7 @@ A web application for viewing Claude chat conversations from exported JSON files
 ## Features
 
 - View Claude chat JSON exports in a readable format
+- Browse and select from multiple conversations (conversations.json support)
 - Support for code blocks with syntax highlighting
 - Download all code and artifacts as a zip file
 - Copy entire conversations with formatting preserved
@@ -19,17 +20,34 @@ A web application for viewing Claude chat conversations from exported JSON files
 
 Visit [tools.osteele.com/claude-chat-viewer](https://tools.osteele.com/claude-chat-viewer) to use the application.
 
+### Viewing Individual Conversations
+
 1. Export your Claude chat as JSON
-2. Click "Enter JSON" in the viewer
-3. Paste your JSON
+2. Click "Enter JSON" in the viewer or use the "Upload File" button
+3. Paste your JSON or select a file
 4. View your conversation in a clean, readable format
+
+### Viewing Multiple Conversations (conversations.json)
+
+The viewer now supports the `conversations.json` file from Claude's full data export:
+
+1. Request a data export from Claude (Settings → Account → Request Export)
+2. Extract the downloaded archive
+3. Upload the `conversations.json` file using the "Upload File" button
+4. Browse through all your conversations with summaries (when available)
+5. Select any conversation to view in detail
+6. Use the header navigation to switch between conversations
 
 ### Loading Files via URL Parameter
 
-In development mode, you can also load a JSON conversation file directly by providing a `file` URL parameter:
+In development mode, you can load files directly via URL parameter:
 
 ```
-http://localhost:5173/?file=/inputs/gosper-chat.json
+# Single conversation
+http://localhost:5173/?file=inputs/chat.json
+
+# Multiple conversations
+http://localhost:5173/?file=inputs/data/conversations.json
 ```
 
 This is particularly useful for:

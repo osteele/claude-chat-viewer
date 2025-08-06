@@ -1,12 +1,13 @@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { AlertCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { AlertCircle, Upload } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
 import Instructions from "../content/instructions.mdx";
 import { ChatData, ChatDataSchema } from "../schemas/chat";
 import { formatValidationErrors } from "../lib/utils";
 
 const STORAGE_KEY = "chat-viewer-json";
+const MAX_CACHE_SIZE = 100000; // Don't cache files larger than ~100KB
 
 type ConversationOption = {
   name: string;
@@ -16,14 +17,16 @@ type ConversationOption = {
 
 interface JsonInputProps {
   onValidJson: (data: ChatData) => void;
+  onConversationList: (conversations: ChatData[]) => void;
 }
 
-export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson }) => {
+export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversationList }) => {
   const [jsonText, setJsonText] = useState(
     sessionStorage.getItem(STORAGE_KEY) || ""
   );
   const [options, setOptions] = useState<ConversationOption[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     sessionStorage.setItem(STORAGE_KEY, jsonText);
@@ -36,89 +39,104 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson }) => {
     }
   };
 
+  const processJsonData = (data: any, skipCaching = false) => {
+    // Handle array of conversations
+    if (Array.isArray(data)) {
+      if (data.length === 0) {
+        setError("JSON array is empty.");
+        return;
+      }
+
+      // Validate each conversation in the array as ChatData
+      const validConversations = data
+        .map((conversation: any) => ChatDataSchema.safeParse(conversation))
+        .filter((result: any) => result.success)
+        .map((result: any) => result.data);
+
+      if (validConversations.length > 1) {
+        // Multiple valid conversations - show conversation browser
+        onConversationList(validConversations);
+        setError(null);
+        setOptions([]);
+        return;
+      } else if (validConversations.length === 1) {
+        // Single valid conversation - show it directly
+        if (!skipCaching && jsonText.length <= MAX_CACHE_SIZE) {
+          localStorage.setItem(STORAGE_KEY, jsonText);
+        }
+        onValidJson(validConversations[0]);
+        setError(null);
+        setOptions([]);
+        return;
+      }
+
+      // If we get here, no valid conversations were found
+      setError("No valid conversations found in the JSON array.");
+      return;
+    }
+
+    // Single conversation object
+    const result = ChatDataSchema.safeParse(data);
+    if (result.success) {
+      // Only cache if not skipping and file is reasonably small
+      if (!skipCaching && jsonText.length <= MAX_CACHE_SIZE) {
+        localStorage.setItem(STORAGE_KEY, jsonText);
+      }
+      onValidJson(result.data);
+      setError(null);
+      setOptions([]);
+    } else {
+      const errors = result.error.errors.map((err: any) => ({
+        path: err.path.join("."),
+        message: err.message,
+      }));
+      setError(formatValidationErrors(JSON.stringify(data, null, 2), errors));
+    }
+  };
+
   const handleSubmit = () => {
     let parsedData;
     try {
       parsedData = JSON.parse(jsonText);
     } catch (err) {
       if (err instanceof Error) {
-        throw new Error(
-          `Invalid JSON: ${err.message}. Please check your JSON syntax.`
-        );
+        setError(`Invalid JSON: ${err.message}. Please check your JSON syntax.`);
+      } else {
+        setError("Failed to parse JSON");
       }
-      throw new Error("Failed to parse JSON");
+      return;
     }
 
-    // Handle array of conversations
-    if (Array.isArray(parsedData)) {
-      switch (parsedData.length) {
-        case 0:
-          setError("JSON array is empty.");
-          return;
-        case 1:
-          // Singleton array
-          parsedData = parsedData[0];
-          break;
-        default:
-          // Validate each conversation in the array
-          const validConversations = parsedData
-            .map((conversation) => ChatDataSchema.safeParse(conversation))
-            .filter((result) => result.success)
-            .map((result) => result.data);
+    processJsonData(parsedData);
+  };
 
-          if (validConversations.length !== parsedData.length) {
-            console.info(
-              `${validConversations.length} out of ${parsedData.length} conversations are valid`
-            );
-            for (const conversation of parsedData) {
-              const result = ChatDataSchema.safeParse(conversation);
-              if (!result.success) {
-                const index = parsedData.indexOf(conversation);
-                const errors = result.error.errors.map((err) => ({
-                  path: err.path.join("."),
-                  message: err.message,
-                }));
-                console.error(
-                  `Conversation #${
-                    index + 1
-                  } is invalid:\n${formatValidationErrors(
-                    JSON.stringify(conversation, null, 2),
-                    errors
-                  )}`
-                );
-              }
-            }
-            setError("The JSON is not an array of valid conversations.");
-            return;
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      if (content) {
+        setJsonText(content);
+        try {
+          const parsedData = JSON.parse(content);
+          // Skip caching for uploaded files to avoid storage issues with large files
+          processJsonData(parsedData, true);
+        } catch (err) {
+          if (err instanceof Error) {
+            setError(`Invalid JSON file: ${err.message}`);
+          } else {
+            setError("Failed to parse JSON file");
           }
-
-          // Show options if multiple valid conversations
-          setOptions(
-            validConversations.map((conversation) => ({
-              name: conversation.name || "Untitled Conversation",
-              uuid: conversation.uuid,
-              data: conversation,
-            }))
-          );
-          setError(null);
-          return;
+        }
       }
-    }
+    };
+    reader.readAsText(file);
+  };
 
-    // Single conversation object
-    const result = ChatDataSchema.safeParse(parsedData);
-    if (result.success) {
-      localStorage.setItem(STORAGE_KEY, jsonText);
-      onValidJson(result.data);
-      setError(null);
-      setOptions([]);
-    } else {
-      const errors = result.error.errors.map((err) => ({
-        path: err.path.join("."),
-        message: err.message,
-      }));
-      setError(formatValidationErrors(jsonText, errors));
-    }
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
   };
 
   const selectConversation = (option: ConversationOption) => {
@@ -145,17 +163,37 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson }) => {
       <div className="lg:col-span-2 space-y-4">
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
           <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
-            <h3 className="text-sm font-medium text-gray-900">JSON Input</h3>
-            <p className="text-xs text-gray-500 mt-1">
-              Paste your Claude chat export here
-            </p>
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-sm font-medium text-gray-900">JSON Input</h3>
+                <p className="text-xs text-gray-500 mt-1">
+                  Paste your Claude chat export here or upload a file
+                </p>
+              </div>
+              <Button
+                onClick={handleUploadClick}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <Upload className="h-4 w-4" />
+                Upload File
+              </Button>
+            </div>
           </div>
           <textarea
             className="w-full h-96 p-4 font-mono text-sm border-0 focus:ring-2 focus:ring-blue-500 resize-none"
             value={jsonText}
             onChange={(e) => setJsonText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Paste JSON here..."
+            placeholder="Paste JSON here or click 'Upload File' to select a conversations.json file..."
+          />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            onChange={handleFileUpload}
+            className="hidden"
           />
         </div>
 

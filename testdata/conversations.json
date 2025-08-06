@@ -1,0 +1,126 @@
+[
+  {
+    "uuid": "test-conv-1",
+    "name": "Test Conversation 1",
+    "created_at": "2024-12-01T10:00:00Z",
+    "updated_at": "2024-12-01T10:15:00Z",
+    "account": {
+      "uuid": "test-account-1"
+    },
+    "chat_messages": [
+      {
+        "uuid": "msg-1",
+        "index": 0,
+        "sender": "human",
+        "content": [
+          {
+            "type": "text",
+            "text": "Hello, Claude!"
+          }
+        ],
+        "text": "Hello, Claude!",
+        "created_at": "2024-12-01T10:00:00Z",
+        "updated_at": "2024-12-01T10:00:00Z",
+        "truncated": false,
+        "attachments": [],
+        "files": []
+      },
+      {
+        "uuid": "msg-2", 
+        "index": 1,
+        "sender": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "Hello! How can I help you today?"
+          }
+        ],
+        "text": "Hello! How can I help you today?",
+        "created_at": "2024-12-01T10:01:00Z",
+        "updated_at": "2024-12-01T10:01:00Z",
+        "truncated": false,
+        "attachments": [],
+        "files": []
+      }
+    ]
+  },
+  {
+    "uuid": "test-conv-2", 
+    "name": "Test Conversation 2",
+    "created_at": "2024-12-02T14:00:00Z",
+    "updated_at": "2024-12-02T14:30:00Z",
+    "account": {
+      "uuid": "test-account-1"
+    },
+    "chat_messages": [
+      {
+        "uuid": "msg-3",
+        "index": 0,
+        "sender": "human",
+        "content": [
+          {
+            "type": "text",
+            "text": "Can you help me with Python?"
+          }
+        ],
+        "text": "Can you help me with Python?",
+        "created_at": "2024-12-02T14:00:00Z",
+        "updated_at": "2024-12-02T14:00:00Z",
+        "truncated": false,
+        "attachments": [],
+        "files": []
+      },
+      {
+        "uuid": "msg-4",
+        "index": 1,
+        "sender": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "Of course! I'd be happy to help you with Python. What specific topic or problem are you working on?"
+          }
+        ],
+        "text": "Of course! I'd be happy to help you with Python. What specific topic or problem are you working on?",
+        "created_at": "2024-12-02T14:01:00Z",
+        "updated_at": "2024-12-02T14:01:00Z",
+        "truncated": false,
+        "attachments": [],
+        "files": []
+      },
+      {
+        "uuid": "msg-5",
+        "index": 2,
+        "sender": "human", 
+        "content": [
+          {
+            "type": "text",
+            "text": "I need to write a function that sorts a list."
+          }
+        ],
+        "text": "I need to write a function that sorts a list.",
+        "created_at": "2024-12-02T14:15:00Z",
+        "updated_at": "2024-12-02T14:15:00Z",
+        "truncated": false,
+        "attachments": [],
+        "files": []
+      },
+      {
+        "uuid": "msg-6",
+        "index": 3,
+        "sender": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "Here's a simple function to sort a list:\n\n```python\ndef sort_list(items):\n    return sorted(items)\n\n# Example usage\nnumbers = [3, 1, 4, 1, 5, 9]\nsorted_numbers = sort_list(numbers)\nprint(sorted_numbers)  # [1, 1, 3, 4, 5, 9]\n```\n\nThis uses Python's built-in `sorted()` function, which returns a new sorted list without modifying the original."
+          }
+        ],
+        "text": "Here's a simple function to sort a list:\n\n```python\ndef sort_list(items):\n    return sorted(items)\n\n# Example usage\nnumbers = [3, 1, 4, 1, 5, 9]\nsorted_numbers = sort_list(numbers)\nprint(sorted_numbers)  # [1, 1, 3, 4, 5, 9]\n```\n\nThis uses Python's built-in `sorted()` function, which returns a new sorted list without modifying the original.",
+        "created_at": "2024-12-02T14:16:00Z",
+        "updated_at": "2024-12-02T14:16:00Z",
+        "truncated": false,
+        "attachments": [],
+        "files": []
+      }
+    ]
+  }
+]
