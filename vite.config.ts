@@ -8,6 +8,7 @@ import { defineConfig } from 'vite'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
+  base: process.env.NODE_ENV === 'production' ? '/claude-chat-viewer/' : '/',
   plugins: [
     mdx(),
     react()

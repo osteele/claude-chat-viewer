@@ -395,13 +395,13 @@ export const JsonInput: React.FC<JsonInputProps> = ({
     <div className="max-w-6xl mx-auto">
       <div className="flex items-start gap-4 mb-8">
         <img 
-          src="/mascot-transparent.webp" 
+          src={`${import.meta.env.BASE_URL}mascot-transparent.webp`}
           alt="Claude Chat Viewer Mascot" 
           className="h-36 w-auto object-contain flex-shrink-0"
           onError={(e) => {
             const img = e.target as HTMLImageElement;
             img.onerror = null;
-            img.src = '/mascot-transparent.png';
+            img.src = `${import.meta.env.BASE_URL}mascot-transparent.png`;
           }}
         />
         <div className="flex-1 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-8 shadow-sm">
