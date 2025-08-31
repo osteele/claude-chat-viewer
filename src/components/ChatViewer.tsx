@@ -6,6 +6,7 @@ import { Artifact } from "./Artifact";
 import { CodeBlock } from "./CodeBlock";
 import { JsonInput } from "./JsonInput";
 import { ConversationBrowser } from "./ConversationBrowser";
+import { MasterDetailView } from "./MasterDetailView";
 import { chatToText, chatToHtml, chatToMarkdown } from "../lib/utils";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -632,15 +633,16 @@ const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
 };
 
 const ChatViewer: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<"json" | "view" | "browse">("json");
+  const [activeTab, setActiveTab] = useState<"json" | "view" | "browse" | "master-detail">("json");
   const [chatData, setChatData] = useState<ChatData | null>(null);
   const [conversationList, setConversationList] = useState<ChatData[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [useMasterDetail] = useState(true); // Default to master-detail view
 
   // Update URL to reflect current state
-  const updateURL = (tab: "json" | "view" | "browse", conversationId?: string) => {
+  const updateURL = (tab: "json" | "view" | "browse" | "master-detail", conversationId?: string) => {
     const params = new URLSearchParams(window.location.search);
     const fileParam = params.get('file');
     
@@ -674,8 +676,18 @@ const ChatViewer: React.FC = () => {
   const handleConversationList = (conversations: ChatData[]) => {
     setConversationList(conversations);
     setChatData(null);
-    setActiveTab("browse");
-    updateURL("browse");
+    // Use master-detail view when enabled
+    if (useMasterDetail) {
+      setActiveTab("master-detail");
+      // Select first conversation by default if available
+      if (conversations.length > 0) {
+        setChatData(conversations[0]);
+        updateURL("view", conversations[0].uuid);
+      }
+    } else {
+      setActiveTab("browse");
+      updateURL("browse");
+    }
   };
 
   const handleSelectFromBrowser = (conversation: ChatData) => {
@@ -793,12 +805,32 @@ const ChatViewer: React.FC = () => {
               const conversation = validConversations.find(c => c.uuid === conversationParam);
               if (conversation) {
                 setChatData(conversation);
-                setActiveTab("view");
+                if (useMasterDetail) {
+                  setActiveTab("master-detail");
+                } else {
+                  setActiveTab("view");
+                }
+              } else {
+                if (useMasterDetail) {
+                  setActiveTab("master-detail");
+                  // Select first conversation by default
+                  if (validConversations.length > 0) {
+                    setChatData(validConversations[0]);
+                  }
+                } else {
+                  setActiveTab("browse");
+                }
+              }
+            } else {
+              if (useMasterDetail) {
+                setActiveTab("master-detail");
+                // Select first conversation by default
+                if (validConversations.length > 0) {
+                  setChatData(validConversations[0]);
+                }
               } else {
                 setActiveTab("browse");
               }
-            } else {
-              setActiveTab("browse");
             }
             return;
           }
@@ -819,7 +851,8 @@ const ChatViewer: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#f1f0e7] print:bg-white">
-      {/* Minimal Header Bar */}
+      {/* Minimal Header Bar - Hide when in master-detail view */}
+      {activeTab !== "master-detail" && (
       <div className="print:hidden bg-gray-50/80 border-b border-gray-100">
         <div className="max-w-4xl mx-auto px-6 py-1.5 flex justify-between items-center">
           <div className="flex items-center gap-1">
@@ -842,9 +875,17 @@ const ChatViewer: React.FC = () => {
             {conversationList && (
               <button
                 onClick={() => {
-                  setActiveTab("browse");
-                  setChatData(null);
-                  updateURL("browse");
+                  if (useMasterDetail) {
+                    setActiveTab("master-detail");
+                    if (!chatData && conversationList.length > 0) {
+                      setChatData(conversationList[0]);
+                      updateURL("view", conversationList[0].uuid);
+                    }
+                  } else {
+                    setActiveTab("browse");
+                    setChatData(null);
+                    updateURL("browse");
+                  }
                   window.scrollTo(0, 0);
                 }}
                 className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
@@ -889,8 +930,9 @@ const ChatViewer: React.FC = () => {
           </a>
         </div>
       </div>
+      )}
       
-      <div className="max-w-4xl mx-auto px-6 py-8">
+      <div className={activeTab === "master-detail" ? "" : "max-w-4xl mx-auto px-6 py-8"}>
         <div className="print:hidden">
           {loadError && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
@@ -904,6 +946,20 @@ const ChatViewer: React.FC = () => {
             </div>
           ) : activeTab === "json" ? (
             <JsonInput onValidJson={handleValidJson} onConversationList={handleConversationList} />
+          ) : activeTab === "master-detail" && conversationList ? (
+            <div className="fixed inset-0 top-[49px]">
+              <MasterDetailView
+                conversations={conversationList}
+                selectedConversation={chatData}
+                onSelectConversation={(conversation) => {
+                  setChatData(conversation);
+                  updateURL("view", conversation.uuid);
+                }}
+                onBack={handleBackToInput}
+              >
+                {chatData && <ConversationView data={chatData} />}
+              </MasterDetailView>
+            </div>
           ) : activeTab === "browse" && conversationList ? (
             <ConversationBrowser
               conversations={conversationList}

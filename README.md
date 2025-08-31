@@ -137,6 +137,8 @@ tool.
 Written with [Claude](https://www.anthropic.com/claude) 🤖 and
 [Cursor](https://www.cursor.com) ✨
 
+Thanks to [@adamnemecek](https://github.com/adamnemecek) for the UI improvement suggestion (#1).
+
 ## License
 
 MIT
