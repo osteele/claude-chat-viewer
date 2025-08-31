@@ -10,7 +10,7 @@ import { MasterDetailView } from "./MasterDetailView";
 import { chatToText, chatToHtml, chatToMarkdown } from "../lib/utils";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
-import mime from "mime-types";
+import mime from "mime";
 
 interface MessageCardProps {
   message: ChatMessage;
@@ -235,7 +235,7 @@ const getFileInfo = (
   }
 
   // Try to get extension from MIME type first
-  let extension = mime.extension(inputType);
+  let extension = mime.getExtension(inputType);
 
   // If no extension found and we have a language, map common programming languages
   if (!extension && language) {
