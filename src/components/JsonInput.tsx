@@ -393,11 +393,23 @@ export const JsonInput: React.FC<JsonInputProps> = ({
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-8 mb-8 shadow-sm">
-        <h1 className="text-3xl font-bold text-gray-900 mb-3">Claude Chat Viewer</h1>
-        <p className="text-gray-600">
-          View your Claude conversations in a clean, readable format. Upload your entire Claude archive to browse and search through all your conversations, or paste individual chats for quick viewing.
-        </p>
+      <div className="flex items-start gap-4 mb-8">
+        <img 
+          src="/mascot-transparent.webp" 
+          alt="Claude Chat Viewer Mascot" 
+          className="h-36 w-auto object-contain flex-shrink-0"
+          onError={(e) => {
+            const img = e.target as HTMLImageElement;
+            img.onerror = null;
+            img.src = '/mascot-transparent.png';
+          }}
+        />
+        <div className="flex-1 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-8 shadow-sm">
+          <h1 className="text-3xl font-bold text-gray-900 mb-3">Claude Chat Viewer</h1>
+          <p className="text-gray-600">
+            View your Claude conversations in a clean, readable format. Upload your entire Claude archive to browse and search through all your conversations, or paste individual chats for quick viewing.
+          </p>
+        </div>
       </div>
 
       <div className="mb-8">
