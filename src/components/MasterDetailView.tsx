@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { ChatData } from "../schemas/chat";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Calendar, Search, X, PanelLeftClose, PanelLeft } from "lucide-react";
+import { findSearchMatches, SearchMatch } from "../lib/searchUtils";
 
 interface MasterDetailViewProps {
   conversations: ChatData[];
@@ -19,7 +20,7 @@ export const MasterDetailView: React.FC<MasterDetailViewProps> = ({
   children,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchMode, setSearchMode] = useState<"title" | "full">("title");
+  const [searchMode, setSearchMode] = useState<"title" | "full">("full");
   const [useRegex, setUseRegex] = useState(false);
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -52,11 +53,15 @@ export const MasterDetailView: React.FC<MasterDetailViewProps> = ({
     }
   };
 
-  // Filter conversations based on search criteria
-  const filteredConversations = conversations.filter((conversation) => {
+  // Filter conversations and get search matches
+  const { filteredConversations, searchMatches } = (() => {
     if (!searchQuery.trim()) {
-      return true;
+      return { filteredConversations: conversations, searchMatches: new Map() };
     }
+    
+    const matchesMap = new Map<string, SearchMatch[]>();
+    
+    const filtered = conversations.filter((conversation) => {
 
     try {
       let searchPattern: RegExp | string;
@@ -98,10 +103,24 @@ export const MasterDetailView: React.FC<MasterDetailViewProps> = ({
         const fullText = `${title} ${summary} ${messagesText}`;
         
         if (useRegex) {
-          return (searchPattern as RegExp).test(fullText);
+          const hasMatch = (searchPattern as RegExp).test(fullText);
+          if (hasMatch && searchMode === "full") {
+            const matches = findSearchMatches(conversation, searchQuery, useRegex, caseSensitive);
+            if (matches.length > 0) {
+              matchesMap.set(conversation.uuid, matches);
+            }
+          }
+          return hasMatch;
         } else {
           const normalizedText = caseSensitive ? fullText : fullText.toLowerCase();
-          return normalizedText.includes(searchPattern as string);
+          const hasMatch = normalizedText.includes(searchPattern as string);
+          if (hasMatch && searchMode === "full") {
+            const matches = findSearchMatches(conversation, searchQuery, useRegex, caseSensitive);
+            if (matches.length > 0) {
+              matchesMap.set(conversation.uuid, matches);
+            }
+          }
+          return hasMatch;
         }
       }
     } catch (error) {
@@ -111,7 +130,10 @@ export const MasterDetailView: React.FC<MasterDetailViewProps> = ({
       }
       return false;
     }
-  });
+    });
+    
+    return { filteredConversations: filtered, searchMatches: matchesMap };
+  })();
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -264,6 +286,28 @@ export const MasterDetailView: React.FC<MasterDetailViewProps> = ({
                       {conversation.summary}
                     </p>
                   )}
+                  
+                  {/* Show search matches when searching */}
+                  {searchQuery && searchMode === "full" && searchMatches.get(conversation.uuid) && (
+                    <div className="mt-2 space-y-1">
+                      {searchMatches.get(conversation.uuid)!.slice(0, 1).map((match: SearchMatch, idx: number) => (
+                        <div key={idx} className="text-xs bg-yellow-50 border border-yellow-100 rounded p-1.5">
+                          <span className="text-gray-500">
+                            {match.messageSender === "human" ? "H: " : "C: "}
+                          </span>
+                          <span className="text-gray-600">{match.before}</span>
+                          <span className="bg-yellow-200 font-medium">{match.match}</span>
+                          <span className="text-gray-600">{match.after}</span>
+                        </div>
+                      ))}
+                      {searchMatches.get(conversation.uuid)!.length > 1 && (
+                        <div className="text-xs text-gray-400 italic pl-1">
+                          +{searchMatches.get(conversation.uuid)!.length - 1} more
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
                   <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
                     <div className="flex items-center gap-1">
                       <Calendar className="h-3 w-3" />

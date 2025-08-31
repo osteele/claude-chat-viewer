@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, Calendar, Clock, Search, X } from "lucide-react";
 import { ChatData } from "../schemas/chat";
 import { useState, useMemo } from "react";
+import { findSearchMatches, SearchMatch } from "../lib/searchUtils";
 
 interface ConversationBrowserProps {
   conversations: ChatData[];
@@ -15,7 +16,7 @@ export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
   onBack,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchMode, setSearchMode] = useState<"title" | "full">("title");
+  const [searchMode, setSearchMode] = useState<"title" | "full">("full");
   const [useRegex, setUseRegex] = useState(false);
   const [caseSensitive, setCaseSensitive] = useState(false);
   
@@ -37,13 +38,15 @@ export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
     onSelectConversation(conversation);
   };
 
-  // Filter conversations based on search criteria
-  const filteredConversations = useMemo(() => {
+  // Filter conversations and get search matches
+  const { filteredConversations, searchMatches } = useMemo(() => {
     if (!searchQuery.trim()) {
-      return conversations;
+      return { filteredConversations: conversations, searchMatches: new Map() };
     }
 
-    return conversations.filter((conversation) => {
+    const matchesMap = new Map<string, SearchMatch[]>();
+    
+    const filtered = conversations.filter((conversation) => {
       try {
         let searchPattern: RegExp | string;
         
@@ -90,10 +93,24 @@ export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
           const fullText = `${title} ${summary} ${messagesText}`;
           
           if (useRegex) {
-            return (searchPattern as RegExp).test(fullText);
+            const hasMatch = (searchPattern as RegExp).test(fullText);
+            if (hasMatch) {
+              const matches = findSearchMatches(conversation, searchQuery, useRegex, caseSensitive);
+              if (matches.length > 0) {
+                matchesMap.set(conversation.uuid, matches);
+              }
+            }
+            return hasMatch;
           } else {
             const normalizedText = caseSensitive ? fullText : fullText.toLowerCase();
-            return normalizedText.includes(searchPattern as string);
+            const hasMatch = normalizedText.includes(searchPattern as string);
+            if (hasMatch) {
+              const matches = findSearchMatches(conversation, searchQuery, useRegex, caseSensitive);
+              if (matches.length > 0) {
+                matchesMap.set(conversation.uuid, matches);
+              }
+            }
+            return hasMatch;
           }
         }
       } catch (error) {
@@ -105,6 +122,8 @@ export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
         return false;
       }
     });
+    
+    return { filteredConversations: filtered, searchMatches: matchesMap };
   }, [conversations, searchQuery, searchMode, useRegex, caseSensitive]);
 
   return (
@@ -234,6 +253,29 @@ export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
                   <p className="text-sm text-gray-600 mt-1 line-clamp-2">
                     {conversation.summary}
                   </p>
+                )}
+                
+                {/* Show search matches when searching */}
+                {searchQuery && searchMode === "full" && searchMatches.get(conversation.uuid) && (
+                  <div className="mt-2 space-y-1">
+                    {searchMatches.get(conversation.uuid)!.slice(0, 2).map((match: SearchMatch, idx: number) => (
+                      <div key={idx} className="text-xs bg-yellow-50 border border-yellow-200 rounded p-2">
+                        <div className="text-gray-500 mb-1">
+                          {match.messageSender === "human" ? "Human" : "Claude"}:
+                        </div>
+                        <div className="text-gray-700">
+                          <span>{match.before}</span>
+                          <span className="bg-yellow-200 font-medium">{match.match}</span>
+                          <span>{match.after}</span>
+                        </div>
+                      </div>
+                    ))}
+                    {searchMatches.get(conversation.uuid)!.length > 2 && (
+                      <div className="text-xs text-gray-500 italic">
+                        ...and {searchMatches.get(conversation.uuid)!.length - 2} more matches
+                      </div>
+                    )}
+                  </div>
                 )}
                 <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
                   <div className="flex items-center gap-1">
