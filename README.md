@@ -30,6 +30,16 @@ A web application for viewing Claude chat conversations from exported JSON files
 - Responsive design
 - Persistent storage of last viewed conversation
 
+## Privacy
+
+**Your data stays private.** This application runs entirely in your browser as a static website. Your conversations and files:
+- Never leave your computer
+- Are not uploaded to any server
+- Cannot be accessed by us or anyone else
+- Are processed locally using JavaScript
+
+The app is served as static files from a CDN with no backend server or database. All processing happens client-side in your browser. We have no ability to see, store, or access any of your Claude conversation data.
+
 ## Usage
 
 Visit [tools.osteele.com/claude-chat-viewer](https://tools.osteele.com/claude-chat-viewer) to use the application.
