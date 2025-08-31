@@ -7,6 +7,16 @@ import { ChatData, ChatDataSchema } from "../schemas/chat";
 import { formatValidationErrors } from "../lib/utils";
 import JSZip from "jszip";
 
+// Import sample conversations
+import samplePython from "../data/sampleConversations/python.json";
+import sampleWebDev from "../data/sampleConversations/webdev.json";
+import sampleData from "../data/sampleConversations/data.json";
+import sampleCreativeWriting from "../data/sampleConversations/creative-writing.json";
+import sampleMath from "../data/sampleConversations/math-tutoring.json";
+import sampleBusiness from "../data/sampleConversations/business-strategy.json";
+import sampleCooking from "../data/sampleConversations/cooking.json";
+import sampleHistory from "../data/sampleConversations/history.json";
+
 const STORAGE_KEY = "chat-viewer-json";
 const MAX_CACHE_SIZE = 100000; // Don't cache files larger than ~100KB
 
@@ -144,7 +154,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({
           path: err.path.join("."),
           message: err.message,
         }));
-      
+
       // If we have specific field errors, show them. Otherwise show a generic message
       if (errors.length > 0) {
         setError(formatValidationErrors(JSON.stringify(data, null, 2), errors));
@@ -164,7 +174,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({
       setError("Please paste JSON data or upload a file first.");
       return;
     }
-    
+
     let parsedData;
     try {
       parsedData = JSON.parse(jsonText);
@@ -256,71 +266,22 @@ export const JsonInput: React.FC<JsonInputProps> = ({
   };
 
   const loadSampleData = () => {
-    const timestamp = new Date().toISOString();
-    const conversationId = "sample-" + Date.now();
-    
-    const sampleData = {
-      "uuid": conversationId,
-      "name": "Sample Conversation: Python Functions",
-      "summary": "Discussion about writing Python functions including greetings and factorial calculation",
-      "created_at": timestamp,
-      "updated_at": timestamp,
-      "settings": {
-        "preview_feature_uses_artifacts": false,
-        "preview_feature_uses_latex": false,
-        "enabled_artifacts_attachments": false
-      },
-      "is_starred": false,
-      "current_leaf_message_uuid": "msg-4",
-      "conversation_id": conversationId,
-      "chat_messages": [
-        {
-          "uuid": "msg-1",
-          "index": 0,
-          "sender": "human",
-          "text": "Hello! Can you help me write a simple Python function?",
-          "content": [{"type": "text", "text": "Hello! Can you help me write a simple Python function?"}],
-          "created_at": timestamp,
-          "updated_at": timestamp,
-          "truncated": false
-        },
-        {
-          "uuid": "msg-2",
-          "index": 1,
-          "sender": "assistant",
-          "text": "Of course! I'd be happy to help you write a Python function. What would you like the function to do? Here's a simple example to get started:\n\n```python\ndef greet(name):\n    \"\"\"\n    A simple function that returns a greeting message.\n    \"\"\"\n    return f\"Hello, {name}! Welcome to Python programming.\"\n\n# Example usage\nprint(greet(\"Alice\"))\n```\n\nThis function takes a name as input and returns a personalized greeting. Would you like me to help you create a different type of function?",
-          "content": [{"type": "text", "text": "Of course! I'd be happy to help you write a Python function. What would you like the function to do? Here's a simple example to get started:\n\n```python\ndef greet(name):\n    \"\"\"\n    A simple function that returns a greeting message.\n    \"\"\"\n    return f\"Hello, {name}! Welcome to Python programming.\"\n\n# Example usage\nprint(greet(\"Alice\"))\n```\n\nThis function takes a name as input and returns a personalized greeting. Would you like me to help you create a different type of function?"}],
-          "created_at": timestamp,
-          "updated_at": timestamp,
-          "truncated": false
-        },
-        {
-          "uuid": "msg-3",
-          "index": 2,
-          "sender": "human",
-          "text": "That's great! Can you show me a function that calculates the factorial of a number?",
-          "content": [{"type": "text", "text": "That's great! Can you show me a function that calculates the factorial of a number?"}],
-          "created_at": timestamp,
-          "updated_at": timestamp,
-          "truncated": false
-        },
-        {
-          "uuid": "msg-4",
-          "index": 3,
-          "sender": "assistant",
-          "text": "Certainly! Here's a Python function that calculates the factorial of a number:\n\n```python\ndef factorial(n):\n    \"\"\"\n    Calculate the factorial of a non-negative integer.\n    \n    Args:\n        n: A non-negative integer\n    \n    Returns:\n        The factorial of n\n    \"\"\"\n    if n < 0:\n        raise ValueError(\"Factorial is not defined for negative numbers\")\n    elif n == 0 or n == 1:\n        return 1\n    else:\n        result = 1\n        for i in range(2, n + 1):\n            result *= i\n        return result\n\n# Example usage\nprint(factorial(5))  # Output: 120\nprint(factorial(0))  # Output: 1\nprint(factorial(10)) # Output: 3628800\n```\n\nThis iterative version is efficient and easy to understand. The function:\n- Handles edge cases (negative numbers, 0, and 1)\n- Uses a loop to calculate the factorial\n- Includes documentation and examples\n\nWould you like to see a recursive version as well?",
-          "content": [{"type": "text", "text": "Certainly! Here's a Python function that calculates the factorial of a number:\n\n```python\ndef factorial(n):\n    \"\"\"\n    Calculate the factorial of a non-negative integer.\n    \n    Args:\n        n: A non-negative integer\n    \n    Returns:\n        The factorial of n\n    \"\"\"\n    if n < 0:\n        raise ValueError(\"Factorial is not defined for negative numbers\")\n    elif n == 0 or n == 1:\n        return 1\n    else:\n        result = 1\n        for i in range(2, n + 1):\n            result *= i\n        return result\n\n# Example usage\nprint(factorial(5))  # Output: 120\nprint(factorial(0))  # Output: 1\nprint(factorial(10)) # Output: 3628800\n```\n\nThis iterative version is efficient and easy to understand. The function:\n- Handles edge cases (negative numbers, 0, and 1)\n- Uses a loop to calculate the factorial\n- Includes documentation and examples\n\nWould you like to see a recursive version as well?"}],
-          "created_at": timestamp,
-          "updated_at": timestamp,
-          "truncated": false
-        }
-      ]
-    };
-    
-    // Directly load the sample data without using the text area
+    // Assemble sample conversations from imported files
+    const sampleConversations = [
+      samplePython,
+      sampleWebDev,
+      sampleData,
+      sampleCreativeWriting,
+      sampleMath,
+      sampleBusiness,
+      sampleCooking,
+      sampleHistory
+    ];
+
+    // Load the sample conversations using the same flow as multiple conversation files
     setError(null);
     setOptions([]);
-    onValidJson(sampleData as ChatData);
+    onConversationList(sampleConversations as ChatData[]);
   };
 
   const handlePasteFromClipboard = async () => {
@@ -394,9 +355,9 @@ export const JsonInput: React.FC<JsonInputProps> = ({
   return (
     <div className="max-w-6xl mx-auto">
       <div className="flex items-start gap-4 mb-8">
-        <img 
+        <img
           src={`${import.meta.env.BASE_URL}mascot-transparent.webp`}
-          alt="Claude Chat Viewer Mascot" 
+          alt="Claude Chat Viewer Mascot"
           className="h-36 w-auto object-contain flex-shrink-0"
           onError={(e) => {
             const img = e.target as HTMLImageElement;
@@ -454,10 +415,10 @@ export const JsonInput: React.FC<JsonInputProps> = ({
                 </p>
               </div>
             </div>
-            <div 
+            <div
               className={`border-2 border-dashed rounded-lg p-8 text-center transition-all ${
-                isDragging 
-                  ? 'border-blue-500 bg-blue-50' 
+                isDragging
+                  ? 'border-blue-500 bg-blue-50'
                   : 'border-gray-300 hover:border-gray-400'
               }`}
               onDragEnter={handleDragEnter}
@@ -495,7 +456,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({
               <div className="prose prose-sm text-gray-600">
                 <p>Export a single chat from Claude and paste the JSON here.</p>
                 <p className="mt-2">
-                  See <a href="https://observablehq.com/@simonw/convert-claude-json-to-markdown" 
+                  See <a href="https://observablehq.com/@simonw/convert-claude-json-to-markdown"
                     target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
                     Convert Claude JSON to Markdown
                   </a> for instructions on using the browser developer console to extract the JSON for a chat.
@@ -554,14 +515,14 @@ export const JsonInput: React.FC<JsonInputProps> = ({
                   placeholder="Paste your conversation JSON here..."
                 />
               </div>
-              <Button 
-                onClick={handleSubmit} 
+              <Button
+                onClick={handleSubmit}
                 className="w-full"
                 disabled={!jsonText.trim() || !isValidJson}
               >
-                {!jsonText.trim() 
-                  ? "Paste JSON to continue" 
-                  : !isValidJson 
+                {!jsonText.trim()
+                  ? "Paste JSON to continue"
+                  : !isValidJson
                     ? "Fix JSON errors to continue"
                     : "Load Conversation"
                 }
@@ -575,14 +536,14 @@ export const JsonInput: React.FC<JsonInputProps> = ({
             <FileJson className="h-16 w-16 mx-auto text-gray-400 mb-4" />
             <h2 className="text-xl font-semibold mb-2">Try with Sample Data</h2>
             <p className="text-gray-600 mb-6 max-w-md mx-auto">
-              New to Claude Chat Viewer? Load a sample conversation to see how it works.
+              New to Claude Chat Viewer? Load sample conversations to see how it works.
             </p>
             <Button onClick={loadSampleData} size="lg" className="gap-2">
               <FileJson className="h-5 w-5" />
-              Load Sample Conversation
+              Load Sample Conversations
             </Button>
             <p className="text-xs text-gray-500 mt-4">
-              This will load a demo conversation about Python programming
+              This will load 3 demo conversations: Python, Web Development, and Data Analysis
             </p>
           </div>
         </TabsContent>
@@ -595,17 +556,17 @@ export const JsonInput: React.FC<JsonInputProps> = ({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
           </svg>
           <p>
-            <strong>Privacy:</strong> This app runs entirely in your browser. Your conversations and files never leave your computer. 
+            <strong>Privacy:</strong> This app runs entirely in your browser. Your conversations and files never leave your computer.
             The app is served as static files with no backend server—we cannot see, store, or access any of your data.
           </p>
         </div>
-        
+
         <div className="flex items-start gap-2">
           <svg className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <p>
-            <strong>Note:</strong> Due to technical limitations, the app cannot currently render image attachments. 
+            <strong>Note:</strong> Due to technical limitations, the app cannot currently render image attachments.
             Also, it does not currently render LaTeX or run artifacts.
           </p>
         </div>
