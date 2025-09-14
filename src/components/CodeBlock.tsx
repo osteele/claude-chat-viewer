@@ -9,11 +9,7 @@ interface CodeBlockProps {
   path?: string;
 }
 
-export const CodeBlock: React.FC<CodeBlockProps> = ({
-  code,
-  language,
-  path,
-}) => {
+export const CodeBlock: React.FC<CodeBlockProps> = ({ code, language, path }) => {
   const [copied, setCopied] = useState(false);
 
   const copyToClipboard = async () => {
@@ -26,22 +22,15 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
     <div className="my-4">
       <div className="flex justify-between items-center bg-[#f1f0eb] px-4 py-2 rounded-t-lg">
         <div className="flex items-center gap-4">
-          <span className="font-mono text-[15px] text-[#383838]">
-            {language}
-          </span>
-          {path && (
-            <span className="text-gray-500 font-mono text-[15px]">{path}</span>
-          )}
+          <span className="font-mono text-[15px] text-[#383838]">{language}</span>
+          {path && <span className="text-gray-500 font-mono text-[15px]">{path}</span>}
         </div>
         <button
+          type="button"
           onClick={copyToClipboard}
           className="flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors text-[14px]"
         >
-          {copied ? (
-            <Check className="w-4 h-4" />
-          ) : (
-            <Copy className="w-4 h-4" />
-          )}
+          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
           {copied ? "Copied!" : "Copy"}
         </button>
       </div>

@@ -1,8 +1,8 @@
+import { Calendar, ChevronLeft, Clock, Search, X } from "lucide-react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Calendar, Clock, Search, X } from "lucide-react";
-import { ChatData } from "../schemas/chat";
-import { useState, useMemo } from "react";
-import { findSearchMatches, SearchMatch } from "../lib/searchUtils";
+import { findSearchMatches, type SearchMatch } from "../lib/searchUtils";
+import type { ChatData } from "../schemas/chat";
 
 interface ConversationBrowserProps {
   conversations: ChatData[];
@@ -19,7 +19,7 @@ export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
   const [searchMode, setSearchMode] = useState<"title" | "full">("full");
   const [useRegex, setUseRegex] = useState(false);
   const [caseSensitive, setCaseSensitive] = useState(false);
-  
+
   const formatDate = (dateString: string) => {
     try {
       return new Date(dateString).toLocaleDateString("en-US", {
@@ -45,11 +45,11 @@ export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
     }
 
     const matchesMap = new Map<string, SearchMatch[]>();
-    
+
     const filtered = conversations.filter((conversation) => {
       try {
         let searchPattern: RegExp | string;
-        
+
         if (useRegex) {
           // Use regex search
           searchPattern = new RegExp(searchQuery, caseSensitive ? "" : "i");
@@ -63,56 +63,53 @@ export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
           const title = conversation.name || "Untitled Conversation";
           const summary = conversation.summary || "";
           const searchText = `${title} ${summary}`;
-          
+
           if (useRegex) {
             return (searchPattern as RegExp).test(searchText);
-          } else {
-            const normalizedText = caseSensitive ? searchText : searchText.toLowerCase();
-            return normalizedText.includes(searchPattern as string);
           }
-        } else {
-          // Search in full conversation text
-          const title = conversation.name || "Untitled Conversation";
-          const summary = conversation.summary || "";
-          
-          // Build full text from all messages
-          const messagesText = conversation.chat_messages
-            .map(msg => {
-              // Extract text from content items
-              return msg.content
-                .map(item => {
-                  if (item.type === "text") {
-                    return item.text;
-                  }
-                  return "";
-                })
-                .join(" ");
-            })
-            .join(" ");
-          
-          const fullText = `${title} ${summary} ${messagesText}`;
-          
-          if (useRegex) {
-            const hasMatch = (searchPattern as RegExp).test(fullText);
-            if (hasMatch) {
-              const matches = findSearchMatches(conversation, searchQuery, useRegex, caseSensitive);
-              if (matches.length > 0) {
-                matchesMap.set(conversation.uuid, matches);
-              }
+          const normalizedText = caseSensitive ? searchText : searchText.toLowerCase();
+          return normalizedText.includes(searchPattern as string);
+        }
+        // Search in full conversation text
+        const title = conversation.name || "Untitled Conversation";
+        const summary = conversation.summary || "";
+
+        // Build full text from all messages
+        const messagesText = conversation.chat_messages
+          .map((msg) => {
+            // Extract text from content items
+            return msg.content
+              .map((item) => {
+                if (item.type === "text") {
+                  return item.text;
+                }
+                return "";
+              })
+              .join(" ");
+          })
+          .join(" ");
+
+        const fullText = `${title} ${summary} ${messagesText}`;
+
+        if (useRegex) {
+          const hasMatch = (searchPattern as RegExp).test(fullText);
+          if (hasMatch) {
+            const matches = findSearchMatches(conversation, searchQuery, useRegex, caseSensitive);
+            if (matches.length > 0) {
+              matchesMap.set(conversation.uuid, matches);
             }
-            return hasMatch;
-          } else {
-            const normalizedText = caseSensitive ? fullText : fullText.toLowerCase();
-            const hasMatch = normalizedText.includes(searchPattern as string);
-            if (hasMatch) {
-              const matches = findSearchMatches(conversation, searchQuery, useRegex, caseSensitive);
-              if (matches.length > 0) {
-                matchesMap.set(conversation.uuid, matches);
-              }
-            }
-            return hasMatch;
+          }
+          return hasMatch;
+        }
+        const normalizedText = caseSensitive ? fullText : fullText.toLowerCase();
+        const hasMatch = normalizedText.includes(searchPattern as string);
+        if (hasMatch) {
+          const matches = findSearchMatches(conversation, searchQuery, useRegex, caseSensitive);
+          if (matches.length > 0) {
+            matchesMap.set(conversation.uuid, matches);
           }
         }
+        return hasMatch;
       } catch (error) {
         // Handle invalid regex
         if (useRegex) {
@@ -122,7 +119,7 @@ export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
         return false;
       }
     });
-    
+
     return { filteredConversations: filtered, searchMatches: matchesMap };
   }, [conversations, searchQuery, searchMode, useRegex, caseSensitive]);
 
@@ -136,9 +133,7 @@ export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
         <h1 className="text-2xl font-bold text-gray-900">
           Select Conversation ({filteredConversations.length} of {conversations.length} shown)
         </h1>
-        <p className="text-gray-600 mt-1">
-          Choose a conversation to view from your exported file
-        </p>
+        <p className="text-gray-600 mt-1">Choose a conversation to view from your exported file</p>
       </div>
 
       {/* Search/Filter Controls */}
@@ -154,6 +149,7 @@ export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
           />
           {searchQuery && (
             <button
+              type="button"
               onClick={() => setSearchQuery("")}
               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
               aria-label="Clear search"
@@ -217,18 +213,20 @@ export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
         </div>
 
         {/* Show regex error if pattern is invalid */}
-        {useRegex && searchQuery && (() => {
-          try {
-            new RegExp(searchQuery);
-            return null;
-          } catch (e) {
-            return (
-              <div className="text-sm text-red-600">
-                Invalid regex pattern: {e instanceof Error ? e.message : "Unknown error"}
-              </div>
-            );
-          }
-        })()}
+        {useRegex &&
+          searchQuery &&
+          (() => {
+            try {
+              new RegExp(searchQuery);
+              return null;
+            } catch (e) {
+              return (
+                <div className="text-sm text-red-600">
+                  Invalid regex pattern: {e instanceof Error ? e.message : "Unknown error"}
+                </div>
+              );
+            }
+          })()}
       </div>
 
       <div className="grid gap-4">
@@ -239,65 +237,80 @@ export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
           </div>
         ) : (
           filteredConversations.map((conversation) => (
-          <div
-            key={conversation.uuid}
-            className="bg-white border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-sm transition-colors cursor-pointer"
-            onClick={() => handleSelectConversation(conversation)}
-          >
-            <div className="flex justify-between items-start gap-4">
-              <div className="flex-1 min-w-0">
-                <h3 className="font-medium text-gray-900 truncate">
-                  {conversation.name || "Untitled Conversation"}
-                </h3>
-                {conversation.summary && (
-                  <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                    {conversation.summary}
-                  </p>
-                )}
-                
-                {/* Show search matches when searching */}
-                {searchQuery && searchMode === "full" && searchMatches.get(conversation.uuid) && (
-                  <div className="mt-2 space-y-1">
-                    {searchMatches.get(conversation.uuid)!.slice(0, 2).map((match: SearchMatch, idx: number) => (
-                      <div key={idx} className="text-xs bg-yellow-50 border border-yellow-200 rounded p-2">
-                        <div className="text-gray-500 mb-1">
-                          {match.messageSender === "human" ? "Human" : "Claude"}:
+            <div
+              key={conversation.uuid}
+              className="bg-white border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-sm transition-colors cursor-pointer"
+              onClick={() => handleSelectConversation(conversation)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleSelectConversation(conversation);
+                }
+              }}
+              role="button"
+              tabIndex={0}
+            >
+              <div className="flex justify-between items-start gap-4">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-medium text-gray-900 truncate">
+                    {conversation.name || "Untitled Conversation"}
+                  </h3>
+                  {conversation.summary && (
+                    <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                      {conversation.summary}
+                    </p>
+                  )}
+
+                  {/* Show search matches when searching */}
+                  {searchQuery && searchMode === "full" && searchMatches.get(conversation.uuid) && (
+                    <div className="mt-2 space-y-1">
+                      {searchMatches
+                        .get(conversation.uuid)
+                        ?.slice(0, 2)
+                        .map((match: SearchMatch, idx: number) => (
+                          <div
+                            key={`${conversation.uuid}-match-${idx}`}
+                            className="text-xs bg-yellow-50 border border-yellow-200 rounded p-2"
+                          >
+                            <div className="text-gray-500 mb-1">
+                              {match.messageSender === "human" ? "Human" : "Claude"}:
+                            </div>
+                            <div className="text-gray-700">
+                              <span>{match.before}</span>
+                              <span className="bg-yellow-200 font-medium">{match.match}</span>
+                              <span>{match.after}</span>
+                            </div>
+                          </div>
+                        ))}
+                      {searchMatches.get(conversation.uuid)?.length > 2 && (
+                        <div className="text-xs text-gray-500 italic">
+                          ...and {searchMatches.get(conversation.uuid)?.length - 2} more matches
                         </div>
-                        <div className="text-gray-700">
-                          <span>{match.before}</span>
-                          <span className="bg-yellow-200 font-medium">{match.match}</span>
-                          <span>{match.after}</span>
-                        </div>
-                      </div>
-                    ))}
-                    {searchMatches.get(conversation.uuid)!.length > 2 && (
-                      <div className="text-xs text-gray-500 italic">
-                        ...and {searchMatches.get(conversation.uuid)!.length - 2} more matches
-                      </div>
-                    )}
+                      )}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-4 w-4" />
+                      <span>Created: {formatDate(conversation.created_at)}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-4 w-4" />
+                      <span>Modified: {formatDate(conversation.updated_at)}</span>
+                    </div>
                   </div>
-                )}
-                <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
-                    <span>Created: {formatDate(conversation.created_at)}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-4 w-4" />
-                    <span>Modified: {formatDate(conversation.updated_at)}</span>
+                  <div className="mt-2 text-sm text-gray-600">
+                    {conversation.chat_messages.length} message
+                    {conversation.chat_messages.length !== 1 ? "s" : ""}
                   </div>
                 </div>
-                <div className="mt-2 text-sm text-gray-600">
-                  {conversation.chat_messages.length} message
-                  {conversation.chat_messages.length !== 1 ? "s" : ""}
-                </div>
+                <Button variant="outline" size="sm">
+                  View
+                </Button>
               </div>
-              <Button variant="outline" size="sm">
-                View
-              </Button>
             </div>
-          </div>
-        )))}
+          ))
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
-import { expect, describe, it } from "bun:test";
-import { formatValidationErrors, chatToText, chatToHtml } from "./utils";
-import { ChatData } from "../schemas/chat";
+import { describe, expect, it } from "bun:test";
+import type { ChatData } from "../schemas/chat";
+import { chatToHtml, chatToText, formatValidationErrors } from "./utils";
 
 describe.skip("formatValidationErrors", () => {
   it("should add line numbers to validation errors", () => {
@@ -93,7 +93,7 @@ describe("chatToText", () => {
 
     const result = chatToText(chat);
     expect(result).toBe(
-      "Human:\nHello\nHow are you?\n\nClaude:\nI'm fine, thank you!\nprint('hi')\n"
+      "Human:\nHello\nHow are you?\n\nClaude:\nI'm fine, thank you!\nprint('hi')\n",
     );
   });
 });

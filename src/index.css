@@ -94,71 +94,70 @@
   .page-break-before {
     page-break-before: always;
   }
-  
+
   /* Ensure print-only content is visible */
   .print\\:block {
-    display: block !important;
+    display: block;
   }
-  
+
   .print\\:hidden {
-    display: none !important;
+    display: none;
   }
-  
+
   /* Print artifacts appendix - with multiple selectors for better compatibility */
   .print-only-appendix {
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
+    display: block;
+    visibility: visible;
+    opacity: 1;
     page-break-before: always;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  
+
   /* Better print styling */
   body {
-    background: white !important;
+    background: white;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  
+
   pre {
-    white-space: pre-wrap !important;
-    word-wrap: break-word !important;
+    white-space: pre-wrap;
+    word-wrap: break-word;
   }
-  
+
   /* Keep message labels with the following content (like "keep with next") */
   .message-label {
-    page-break-after: avoid !important;
-    break-after: avoid !important;
+    page-break-after: avoid;
+    break-after: avoid;
   }
-  
+
   /* Print-specific message backgrounds for human messages */
   .human-message-print {
-    background: #f8f9fb !important;
-    background-image: none !important;
+    background: #f8f9fb;
+    background-image: none;
   }
-  
+
   /* Force visibility for all print elements */
   [class*="print:block"] {
-    display: block !important;
-    visibility: visible !important;
+    display: block;
+    visibility: visible;
   }
-  
+
   /* Additional rule for Safari PDF export */
   [data-print-only="true"] {
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
+    display: block;
+    visibility: visible;
+    opacity: 1;
   }
-  
 }
 
 /* Additional print media rule for Safari */
-@media print and (-webkit-min-device-pixel-ratio:0) {
+@media print and (-webkit-min-device-pixel-ratio: 0) {
   .print-only-appendix {
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
+    display: block;
+    visibility: visible;
+    opacity: 1;
   }
 }
 
@@ -270,7 +269,7 @@ input[type="checkbox"]:disabled {
 
 /* Button group hover effects */
 .button-group:hover button {
-  border-color: theme('colors.gray.300');
+  border-color: theme("colors.gray.300");
 }
 
 /* Responsive utilities */

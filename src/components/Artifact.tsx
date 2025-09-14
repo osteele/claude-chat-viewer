@@ -1,16 +1,22 @@
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { useState } from "react"
+import { useState } from "react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 interface ArtifactProps {
-  title: string
-  content: string
-  identifier: string
-  artifactType: string
-  artifactNumber?: number
+  title: string;
+  content: string;
+  identifier: string;
+  artifactType: string;
+  artifactNumber?: number;
 }
 
-export function Artifact({ title, content, identifier: _identifier, artifactType: _artifactType, artifactNumber }: ArtifactProps) {
-  const [isOpen, setIsOpen] = useState(false)
+export function Artifact({
+  title,
+  content,
+  identifier: _identifier,
+  artifactType: _artifactType,
+  artifactNumber,
+}: ArtifactProps) {
+  const [isOpen, setIsOpen] = useState(false);
 
   return (
     <>
@@ -18,6 +24,14 @@ export function Artifact({ title, content, identifier: _identifier, artifactType
         <div
           className="flex rounded-lg border border-[#e8e7df] bg-[#f5f4ef] shadow-md cursor-pointer hover:bg-[#f5f4ee]"
           onClick={() => setIsOpen(true)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setIsOpen(true);
+            }
+          }}
+          role="button"
+          tabIndex={0}
         >
           <div className="flex items-center justify-center w-14 border-r bg-[#f0eee5] border-[#e8e7df]">
             <div className="text-sm text-gray-600 font-mono">&lt;/&gt;</div>
@@ -26,7 +40,9 @@ export function Artifact({ title, content, identifier: _identifier, artifactType
             <div className="font-medium text-gray-900">{title}</div>
             <div className="text-sm text-gray-500 print:hidden">Click to open component</div>
             {artifactNumber && (
-              <div className="text-sm text-gray-500 hidden print:block">Artifact {artifactNumber} (see appendix)</div>
+              <div className="text-sm text-gray-500 hidden print:block">
+                Artifact {artifactNumber} (see appendix)
+              </div>
             )}
           </div>
         </div>
@@ -45,5 +61,5 @@ export function Artifact({ title, content, identifier: _identifier, artifactType
         </SheetContent>
       </Sheet>
     </>
-  )
+  );
 }

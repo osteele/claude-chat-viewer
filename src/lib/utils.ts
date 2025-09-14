@@ -1,6 +1,6 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
-import { ChatData, ChatMessage } from "../schemas/chat";
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+import type { ChatData, ChatMessage } from "../schemas/chat";
 import { parseMessage } from "./messageParser";
 import Prism from "./prism-languages";
 
@@ -24,9 +24,8 @@ export function chatToText(data: ChatData): string {
         .map((item: { type: string; text?: string }) => {
           if (item.type === "text") {
             // Handle code blocks before stripping markdown
-            const text = (item.text ?? "").replace(
-              /```(\w+)?\n([\s\S]*?)```/g,
-              (_, __, code) => code.trim()
+            const text = (item.text ?? "").replace(/```(\w+)?\n([\s\S]*?)```/g, (_, __, code) =>
+              code.trim(),
             );
             return stripMarkdown(text);
           }
@@ -57,28 +56,29 @@ export function chatToHtml(data: ChatData): string {
                   // Convert code blocks with language
                   .replace(/```(\w+)?\n([\s\S]*?)```/g, (_, lang, code) => {
                     const language = lang || "text";
-                    let highlightedCode;
+                    let highlightedCode: string;
                     try {
-                      const grammar = Prism.languages[language] || Prism.languages.plaintext || Prism.languages.text || {};
-                      highlightedCode = Prism.highlight(
-                        code.trim(),
-                        grammar,
-                        language
-                      );
+                      const grammar =
+                        Prism.languages[language] ||
+                        Prism.languages.plaintext ||
+                        Prism.languages.text ||
+                        {};
+                      highlightedCode = Prism.highlight(code.trim(), grammar, language);
                     } catch (error) {
                       // If highlighting fails, just escape the HTML
                       console.warn(`Failed to highlight code for language: ${language}`, error);
-                      highlightedCode = code.trim()
-                        .replace(/&/g, '&amp;')
-                        .replace(/</g, '&lt;')
-                        .replace(/>/g, '&gt;');
+                      highlightedCode = code
+                        .trim()
+                        .replace(/&/g, "&amp;")
+                        .replace(/</g, "&lt;")
+                        .replace(/>/g, "&gt;");
                     }
                     return `<pre class="language-${language}"><code class="language-${language}">${highlightedCode}</code></pre>`;
                   })
                   // Convert inline code
                   .replace(
                     /`([^`]+)`/g,
-                    '<code style="font-family: monospace; background-color: #f5f5f5; padding: 0.2em 0.4em; border-radius: 3px;">$1</code>'
+                    '<code style="font-family: monospace; background-color: #f5f5f5; padding: 0.2em 0.4em; border-radius: 3px;">$1</code>',
                   )
                   // Convert bold
                   .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
@@ -87,28 +87,30 @@ export function chatToHtml(data: ChatData): string {
                   // Convert newlines
                   .replace(/\n/g, "<br>")
               );
-            } else if (item.type === "tool_use" && item.input) {
+            }
+            if (item.type === "tool_use" && item.input) {
               const language = item.input.language || "text";
               const content = item.input.content || "";
-              let highlightedCode;
+              let highlightedCode: string;
               try {
-                const grammar = Prism.languages[language] || Prism.languages.plaintext || Prism.languages.text || {};
-                highlightedCode = Prism.highlight(
-                  content.trim(),
-                  grammar,
-                  language
-                );
+                const grammar =
+                  Prism.languages[language] ||
+                  Prism.languages.plaintext ||
+                  Prism.languages.text ||
+                  {};
+                highlightedCode = Prism.highlight(content.trim(), grammar, language);
               } catch (error) {
                 console.warn(`Failed to highlight code for language: ${language}`, error);
-                highlightedCode = content.trim()
-                  .replace(/&/g, '&amp;')
-                  .replace(/</g, '&lt;')
-                  .replace(/>/g, '&gt;');
+                highlightedCode = content
+                  .trim()
+                  .replace(/&/g, "&amp;")
+                  .replace(/</g, "&lt;")
+                  .replace(/>/g, "&gt;");
               }
               return `<div><strong>${item.input.title}</strong><pre class="language-${language}"><code class="language-${language}">${highlightedCode}</code></pre></div>`;
             }
             return "";
-          }
+          },
         )
         .join("");
       return `<p><strong>${sender}:</strong></p><p>${content}</p>`;
@@ -123,8 +125,8 @@ interface LineMap {
 function buildLineMap(json: string): LineMap {
   const lines = json.split("\n");
   const lineMap: LineMap = {};
-  let currentPath: string[] = [];
-  let arrayIndices: { [key: string]: number } = {};
+  const currentPath: string[] = [];
+  const arrayIndices: { [key: string]: number } = {};
 
   for (let lineNum = 0; lineNum < lines.length; lineNum++) {
     const line = lines[lineNum];
@@ -136,10 +138,7 @@ function buildLineMap(json: string): LineMap {
       if (arrayIndices[currentPathStr] !== undefined) {
         arrayIndices[currentPathStr]++;
         // Store the line number for the array element itself
-        const arrayPath = [
-          ...currentPath,
-          arrayIndices[currentPathStr].toString(),
-        ].join(".");
+        const arrayPath = [...currentPath, arrayIndices[currentPathStr].toString()].join(".");
         lineMap[arrayPath] = lineNum + 1;
       }
     }
@@ -204,42 +203,45 @@ interface MarkdownOptions {
 
 export function chatToMarkdown(data: ChatData, options: MarkdownOptions = {}): string {
   const { showThinking = false, showArtifacts = true, showColophon = true } = options;
-  
+
   let markdown = `# ${data.name || "Untitled Conversation"}\n\n`;
-  
+
   // Add metadata
-  markdown += `**Created:** ${new Date(data.created_at).toLocaleDateString('en-US', { 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
+  markdown += `**Created:** ${new Date(data.created_at).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   })}\n`;
-  
-  markdown += `**Updated:** ${new Date(data.updated_at).toLocaleDateString('en-US', { 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
+
+  markdown += `**Updated:** ${new Date(data.updated_at).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   })}\n\n`;
-  
+
   markdown += "---\n\n";
-  
+
   // Add messages
   data.chat_messages.forEach((message: ChatMessage) => {
     const sender = message.sender === "human" ? "**Human**" : "**Claude**";
     markdown += `## ${sender}\n\n`;
-    
+
     message.content.forEach((item) => {
       if (item.type === "text" && item.text) {
-        const segments = message.sender === "human" ? [{ type: "text" as const, content: item.text }] : parseMessage(item.text);
-        
-        segments.forEach(segment => {
+        const segments =
+          message.sender === "human"
+            ? [{ type: "text" as const, content: item.text }]
+            : parseMessage(item.text);
+
+        segments.forEach((segment) => {
           if (segment.type === "text") {
-            markdown += segment.content + "\n\n";
+            markdown += `${segment.content}\n\n`;
           } else if (segment.type === "thinking" && showThinking) {
-            markdown += `> 💭 **Thinking Process**\n> ${segment.content.split('\n').join('\n> ')}\n\n`;
+            markdown += `> 💭 **Thinking Process**\n> ${segment.content.split("\n").join("\n> ")}\n\n`;
           } else if (segment.type === "code") {
             const lang = segment.language || "";
             markdown += `\`\`\`${lang}\n${segment.content}\n\`\`\`\n\n`;
@@ -255,20 +257,21 @@ export function chatToMarkdown(data: ChatData, options: MarkdownOptions = {}): s
       }
     });
   });
-  
+
   // Add colophon
   if (showColophon) {
     markdown += "---\n\n";
-    markdown += "*Rendered by [Claude Chat Viewer](https://github.com/osteele/claude-chat-viewer)*\n";
+    markdown +=
+      "*Rendered by [Claude Chat Viewer](https://github.com/osteele/claude-chat-viewer)*\n";
     markdown += "*An open-source tool for viewing Claude chat exports*\n";
   }
-  
+
   return markdown;
 }
 
 export function formatValidationErrors(
   json: string,
-  errors: Array<{ path: string; message: string }>
+  errors: Array<{ path: string; message: string }>,
 ): string {
   const lineMap = buildLineMap(json);
 
@@ -295,8 +298,5 @@ export function formatValidationErrors(
     return `${error.message} at "${error.path}"${lineInfo}`;
   });
 
-  return [
-    "The following validation errors were found:",
-    ...formattedErrors,
-  ].join("\n");
+  return ["The following validation errors were found:", ...formattedErrors].join("\n");
 }

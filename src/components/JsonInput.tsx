@@ -1,21 +1,20 @@
+import JSZip from "jszip";
+import { AlertCircle, Archive, CheckCircle, Clipboard, FileJson, Upload } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, Upload, FileJson, Archive, Clipboard, CheckCircle } from "lucide-react";
-import { useEffect, useState, useRef, useCallback } from "react";
-import { ChatData, ChatDataSchema } from "../schemas/chat";
-import { formatValidationErrors } from "../lib/utils";
-import JSZip from "jszip";
-
+import sampleBusiness from "../data/sampleConversations/business-strategy.json";
+import sampleCooking from "../data/sampleConversations/cooking.json";
+import sampleCreativeWriting from "../data/sampleConversations/creative-writing.json";
+import sampleData from "../data/sampleConversations/data.json";
+import sampleHistory from "../data/sampleConversations/history.json";
+import sampleMath from "../data/sampleConversations/math-tutoring.json";
 // Import sample conversations
 import samplePython from "../data/sampleConversations/python.json";
 import sampleWebDev from "../data/sampleConversations/webdev.json";
-import sampleData from "../data/sampleConversations/data.json";
-import sampleCreativeWriting from "../data/sampleConversations/creative-writing.json";
-import sampleMath from "../data/sampleConversations/math-tutoring.json";
-import sampleBusiness from "../data/sampleConversations/business-strategy.json";
-import sampleCooking from "../data/sampleConversations/cooking.json";
-import sampleHistory from "../data/sampleConversations/history.json";
+import type { z } from "zod";
+import { type ChatData, ChatDataSchema } from "../schemas/chat";
 
 const STORAGE_KEY = "chat-viewer-json";
 const MAX_CACHE_SIZE = 100000; // Don't cache files larger than ~100KB
@@ -31,13 +30,8 @@ interface JsonInputProps {
   onConversationList: (conversations: ChatData[], warning?: string) => void;
 }
 
-export const JsonInput: React.FC<JsonInputProps> = ({
-  onValidJson,
-  onConversationList,
-}) => {
-  const [jsonText, setJsonText] = useState(
-    sessionStorage.getItem(STORAGE_KEY) || "",
-  );
+export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversationList }) => {
+  const [jsonText, setJsonText] = useState(sessionStorage.getItem(STORAGE_KEY) || "");
   const [options, setOptions] = useState<ConversationOption[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -69,7 +63,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({
         if (err instanceof Error) {
           const errorMessage = err.message.includes("Unexpected end")
             ? "JSON appears incomplete - keep typing or check for missing brackets"
-            : `Syntax error: ${err.message.split(' at position')[0]}`;
+            : `Syntax error: ${err.message.split(" at position")[0]}`;
           setError(errorMessage);
         }
       }
@@ -101,7 +95,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({
     }
   };
 
-  const processJsonData = (data: any, skipCaching = false) => {
+  const processJsonData = (data: unknown, skipCaching = false) => {
     // Handle array of conversations
     if (Array.isArray(data)) {
       if (data.length === 0) {
@@ -110,7 +104,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({
       }
 
       // Validate each conversation in the array as ChatData
-      const validationResults = data.map((conversation: any, index: number) => {
+      const validationResults = (data as unknown[]).map((conversation: unknown, index: number) => {
         const result = ChatDataSchema.safeParse(conversation);
         if (!result.success) {
           const convName = conversation?.name || `Conversation ${index + 1}`;
@@ -151,38 +145,41 @@ export const JsonInput: React.FC<JsonInputProps> = ({
       });
 
       const validConversations = validationResults
-        .filter((item: any) => item.result.success)
-        .map((item: any) => item.result.data);
+        .filter((item) => item.result.success)
+        .map((item) => item.result.data as ChatData);
 
-      const invalidConversations = validationResults
-        .filter((item: any) => !item.result.success);
+      const invalidConversations = validationResults.filter((item) => !item.result.success);
 
       if (validConversations.length > 1) {
         // Multiple valid conversations - show conversation browser
         let warningMsg: string | undefined;
         if (invalidConversations.length > 0) {
           const errorDetails: string[] = [];
-          errorDetails.push(`❌ Partially loaded: ${validConversations.length} of ${data.length} conversations were valid.\n`);
-          errorDetails.push(`${invalidConversations.length} conversation(s) had validation errors and were skipped:\n`);
+          errorDetails.push(
+            `❌ Partially loaded: ${validConversations.length} of ${data.length} conversations were valid.\n`,
+          );
+          errorDetails.push(
+            `${invalidConversations.length} conversation(s) had validation errors and were skipped:\n`,
+          );
 
           // Show details of first few invalid conversations
-          invalidConversations.slice(0, 3).forEach((item: any) => {
-            const convName = item.conversation?.name || `Conversation ${item.index + 1}`;
+          invalidConversations.slice(0, 3).forEach((item) => {
+            const convName = (item.conversation as { name?: string })?.name || `Conversation ${item.index + 1}`;
             errorDetails.push(`\n• ${convName}:`);
 
             // Get the actual validation errors
-            if (item.result && item.result.error && item.result.error.errors) {
+            if (item.result?.error?.errors) {
               const errors = item.result.error.errors;
 
               // Process union errors to get actual validation details
               const processedErrors: string[] = [];
-              errors.forEach((err: any) => {
+              errors.forEach((err: z.ZodIssue & { unionErrors?: unknown[] }) => {
                 if (err.code === "invalid_union" && err.unionErrors) {
                   // Extract errors from union attempts
-                  err.unionErrors.forEach((unionError: any) => {
+                  err.unionErrors.forEach((unionError: { errors?: z.ZodIssue[] }) => {
                     if (unionError.errors && unionError.errors.length > 0) {
-                      unionError.errors.slice(0, 2).forEach((e: any) => {
-                        const path = e.path.join('.');
+                      unionError.errors.slice(0, 2).forEach((e) => {
+                        const path = e.path.join(".");
                         if (path && e.message !== "Invalid input") {
                           processedErrors.push(`  - At "${path}": ${e.message}`);
                         }
@@ -190,8 +187,9 @@ export const JsonInput: React.FC<JsonInputProps> = ({
                     }
                   });
                 } else {
-                  const path = err.path.join('.');
-                  const message = err.message === "Invalid input" ? "Invalid data format" : err.message;
+                  const path = err.path.join(".");
+                  const message =
+                    err.message === "Invalid input" ? "Invalid data format" : err.message;
                   if (path) {
                     processedErrors.push(`  - At "${path}": ${message}`);
                   } else {
@@ -202,7 +200,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({
 
               // Add the first few processed errors
               if (processedErrors.length > 0) {
-                processedErrors.slice(0, 3).forEach(error => errorDetails.push(error));
+                processedErrors.slice(0, 3).forEach((error) => errorDetails.push(error));
                 if (processedErrors.length > 3) {
                   errorDetails.push(`  - ... and ${processedErrors.length - 3} more errors`);
                 }
@@ -215,46 +213,55 @@ export const JsonInput: React.FC<JsonInputProps> = ({
           });
 
           if (invalidConversations.length > 3) {
-            errorDetails.push(`\n... and ${invalidConversations.length - 3} more conversations with errors`);
+            errorDetails.push(
+              `\n... and ${invalidConversations.length - 3} more conversations with errors`,
+            );
           }
 
           errorDetails.push("\n🐛 Unexpected error?");
           errorDetails.push("If this file was downloaded directly from Claude's export feature:");
-          errorDetails.push("1. Check existing issues: https://github.com/osteele/claude-chat-viewer/issues");
-          errorDetails.push("2. Report new issue: https://github.com/osteele/claude-chat-viewer/issues/new");
+          errorDetails.push(
+            "1. Check existing issues: https://github.com/osteele/claude-chat-viewer/issues",
+          );
+          errorDetails.push(
+            "2. Report new issue: https://github.com/osteele/claude-chat-viewer/issues/new",
+          );
 
-          warningMsg = errorDetails.join('\n');
-          console.log('Warning message being sent:', warningMsg);
+          warningMsg = errorDetails.join("\n");
+          console.log("Warning message being sent:", warningMsg);
         }
         onConversationList(validConversations, warningMsg);
         setError(null);
         setOptions([]);
         return;
-      } else if (validConversations.length === 1) {
+      }
+      if (validConversations.length === 1) {
         // Single valid conversation - check if we should show it directly or in browser
         if (invalidConversations.length > 0) {
           // If there were other invalid conversations, show in browser with warning
           const errorDetails: string[] = [];
           errorDetails.push(`❌ Partially loaded: 1 of ${data.length} conversations was valid.\n`);
-          errorDetails.push(`${invalidConversations.length} conversation(s) had validation errors:\n`);
+          errorDetails.push(
+            `${invalidConversations.length} conversation(s) had validation errors:\n`,
+          );
 
-          invalidConversations.slice(0, 3).forEach((item: any) => {
-            const convName = item.conversation?.name || `Conversation ${item.index + 1}`;
+          invalidConversations.slice(0, 3).forEach((item) => {
+            const convName = (item.conversation as { name?: string })?.name || `Conversation ${item.index + 1}`;
             errorDetails.push(`\n• ${convName}:`);
 
             // Get the actual validation errors
-            if (item.result && item.result.error && item.result.error.errors) {
+            if (item.result?.error?.errors) {
               const errors = item.result.error.errors;
 
               // Process union errors to get actual validation details
               const processedErrors: string[] = [];
-              errors.forEach((err: any) => {
+              errors.forEach((err: z.ZodIssue & { unionErrors?: unknown[] }) => {
                 if (err.code === "invalid_union" && err.unionErrors) {
                   // Extract errors from union attempts
-                  err.unionErrors.forEach((unionError: any) => {
+                  err.unionErrors.forEach((unionError: { errors?: z.ZodIssue[] }) => {
                     if (unionError.errors && unionError.errors.length > 0) {
-                      unionError.errors.slice(0, 2).forEach((e: any) => {
-                        const path = e.path.join('.');
+                      unionError.errors.slice(0, 2).forEach((e) => {
+                        const path = e.path.join(".");
                         if (path && e.message !== "Invalid input") {
                           processedErrors.push(`  - At "${path}": ${e.message}`);
                         }
@@ -262,8 +269,9 @@ export const JsonInput: React.FC<JsonInputProps> = ({
                     }
                   });
                 } else {
-                  const path = err.path.join('.');
-                  const message = err.message === "Invalid input" ? "Invalid data format" : err.message;
+                  const path = err.path.join(".");
+                  const message =
+                    err.message === "Invalid input" ? "Invalid data format" : err.message;
                   if (path) {
                     processedErrors.push(`  - At "${path}": ${message}`);
                   } else {
@@ -274,7 +282,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({
 
               // Add the first few processed errors
               if (processedErrors.length > 0) {
-                processedErrors.slice(0, 3).forEach(error => errorDetails.push(error));
+                processedErrors.slice(0, 3).forEach((error) => errorDetails.push(error));
                 if (processedErrors.length > 3) {
                   errorDetails.push(`  - ... and ${processedErrors.length - 3} more errors`);
                 }
@@ -288,10 +296,14 @@ export const JsonInput: React.FC<JsonInputProps> = ({
 
           errorDetails.push("\n🐛 Unexpected error?");
           errorDetails.push("If this file was downloaded directly from Claude's export feature:");
-          errorDetails.push("1. Check existing issues: https://github.com/osteele/claude-chat-viewer/issues");
-          errorDetails.push("2. Report new issue: https://github.com/osteele/claude-chat-viewer/issues/new");
+          errorDetails.push(
+            "1. Check existing issues: https://github.com/osteele/claude-chat-viewer/issues",
+          );
+          errorDetails.push(
+            "2. Report new issue: https://github.com/osteele/claude-chat-viewer/issues/new",
+          );
 
-          const warningMsg = errorDetails.join('\n');
+          const warningMsg = errorDetails.join("\n");
           onConversationList(validConversations, warningMsg);
         } else {
           // Only one conversation and it's valid - show it directly
@@ -307,16 +319,18 @@ export const JsonInput: React.FC<JsonInputProps> = ({
 
       // If we get here, no valid conversations were found
       const errorDetails: string[] = [];
-      errorDetails.push(`❌ No valid conversations found in the file (0 of ${data.length} conversations could be loaded)\n`);
+      errorDetails.push(
+        `❌ No valid conversations found in the file (0 of ${data.length} conversations could be loaded)\n`,
+      );
 
       // Show details of first few invalid conversations
-      invalidConversations.slice(0, 3).forEach((item: any) => {
-        const convName = item.conversation?.name || `Conversation ${item.index + 1}`;
+      invalidConversations.slice(0, 3).forEach((item) => {
+        const convName = (item.conversation as { name?: string })?.name || `Conversation ${item.index + 1}`;
         errorDetails.push(`\n📄 ${convName}:`);
 
-        const firstErrors = item.result.error.errors.slice(0, 2);
-        firstErrors.forEach((err: any) => {
-          const path = err.path.join('.');
+        const firstErrors = item.result.error?.errors.slice(0, 2) || [];
+        firstErrors.forEach((err: z.ZodIssue) => {
+          const path = err.path.join(".");
           if (path) {
             errorDetails.push(`  • At "${path}": ${err.message}`);
           } else {
@@ -324,13 +338,15 @@ export const JsonInput: React.FC<JsonInputProps> = ({
           }
         });
 
-        if (item.result.error.errors.length > 2) {
+        if (item.result.error?.errors && item.result.error.errors.length > 2) {
           errorDetails.push(`  • ... and ${item.result.error.errors.length - 2} more errors`);
         }
       });
 
       if (invalidConversations.length > 3) {
-        errorDetails.push(`\n... and ${invalidConversations.length - 3} more conversations with errors`);
+        errorDetails.push(
+          `\n... and ${invalidConversations.length - 3} more conversations with errors`,
+        );
       }
 
       errorDetails.push("\n💡 This might be:");
@@ -338,7 +354,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({
       errorDetails.push("• An incompatible format from an older Claude version");
       errorDetails.push("• A modified or incomplete JSON file");
 
-      setError(errorDetails.join('\n'));
+      setError(errorDetails.join("\n"));
       return;
     }
 
@@ -353,10 +369,6 @@ export const JsonInput: React.FC<JsonInputProps> = ({
       setError(null);
       setOptions([]);
     } else {
-      // For better error messages, let's check which schema failed
-      // The union will have tried both schemas, so we can be more specific
-      const hasRequiredFields = data.uuid && data.chat_messages && data.created_at;
-
       // Log validation errors to console in a readable format
       console.error('Conversation validation failed:');
 
@@ -405,19 +417,19 @@ export const JsonInput: React.FC<JsonInputProps> = ({
       const errorsByPath = new Map<string, string[]>();
 
       // For union errors, Zod nests the actual errors inside
-      const processError = (err: any) => {
-        const path = err.path.join('.');
+      const processError = (err: z.ZodIssue & { unionErrors?: unknown[] }) => {
+        const path = err.path.join(".");
         let message = err.message;
 
         // Handle union errors specially - they contain the actual validation errors
         if (err.code === "invalid_union" && err.unionErrors) {
           // Extract the most relevant errors from the union attempts
           const relevantErrors: string[] = [];
-          err.unionErrors.forEach((unionError: any) => {
+          err.unionErrors.forEach((unionError: { errors?: z.ZodIssue[] }) => {
             if (unionError.errors && unionError.errors.length > 0) {
               // Get the first few meaningful errors from each schema attempt
-              unionError.errors.slice(0, 3).forEach((e: any) => {
-                const subPath = e.path.join('.');
+              unionError.errors.slice(0, 3).forEach((e) => {
+                const subPath = e.path.join(".");
                 if (subPath && e.message !== "Invalid input") {
                   relevantErrors.push(`${subPath}: ${e.message}`);
                 }
@@ -427,12 +439,12 @@ export const JsonInput: React.FC<JsonInputProps> = ({
 
           if (relevantErrors.length > 0) {
             // Skip adding this union error and process the nested errors instead
-            relevantErrors.forEach(error => {
-              const [errPath, errMsg] = error.split(': ');
+            relevantErrors.forEach((error) => {
+              const [errPath, errMsg] = error.split(": ");
               if (!errorsByPath.has(errPath)) {
                 errorsByPath.set(errPath, []);
               }
-              errorsByPath.get(errPath)!.push(errMsg);
+              errorsByPath.get(errPath)?.push(errMsg);
             });
             return; // Don't add the union error itself
           }
@@ -464,7 +476,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({
         if (!errorsByPath.has(path)) {
           errorsByPath.set(path, []);
         }
-        errorsByPath.get(path)!.push(message);
+        errorsByPath.get(path)?.push(message);
       };
 
       allErrors.forEach(processError);
@@ -475,11 +487,12 @@ export const JsonInput: React.FC<JsonInputProps> = ({
       let errorCount = 0;
       errorsByPath.forEach((messages, path) => {
         errorCount++;
-        if (errorCount <= 10) { // Show first 10 errors for more detail
+        if (errorCount <= 10) {
+          // Show first 10 errors for more detail
           if (path) {
-            errorSummary.push(`• At "${path}": ${messages.join(', ')}`);
+            errorSummary.push(`• At "${path}": ${messages.join(", ")}`);
           } else {
-            errorSummary.push(`• ${messages.join(', ')}`);
+            errorSummary.push(`• ${messages.join(", ")}`);
           }
         }
       });
@@ -499,12 +512,18 @@ export const JsonInput: React.FC<JsonInputProps> = ({
       errorSummary.push("• Verify all required fields are present");
 
       errorSummary.push("\n🐛 Unexpected error?");
-      errorSummary.push("If this file was downloaded directly from Claude's export feature and hasn't been modified:");
-      errorSummary.push("1. Check if this issue has been reported: https://github.com/osteele/claude-chat-viewer/issues");
-      errorSummary.push("2. If not, please report it: https://github.com/osteele/claude-chat-viewer/issues/new");
+      errorSummary.push(
+        "If this file was downloaded directly from Claude's export feature and hasn't been modified:",
+      );
+      errorSummary.push(
+        "1. Check if this issue has been reported: https://github.com/osteele/claude-chat-viewer/issues",
+      );
+      errorSummary.push(
+        "2. If not, please report it: https://github.com/osteele/claude-chat-viewer/issues/new",
+      );
       errorSummary.push("   Include the error details above when reporting.");
 
-      const errorMessage = errorSummary.join('\n');
+      const errorMessage = errorSummary.join("\n");
       setError(errorMessage);
     }
   };
@@ -533,9 +552,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({
     processJsonData(parsedData);
   };
 
-  const handleFileUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -590,7 +607,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({
           // Skip caching for uploaded files to avoid storage issues with large files
           processJsonData(parsedData, true);
         } catch (err) {
-          console.error('JSON parse error:', err);
+          console.error("JSON parse error:", err);
           if (err instanceof Error) {
             setError(`Invalid JSON file: ${err.message}`);
           } else {
@@ -600,7 +617,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({
       }
     };
     reader.onerror = (e) => {
-      console.error('FileReader error:', e);
+      console.error("FileReader error:", e);
       setError("Failed to read file");
     };
     reader.readAsText(file);
@@ -620,7 +637,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({
       sampleMath,
       sampleBusiness,
       sampleCooking,
-      sampleHistory
+      sampleHistory,
     ];
 
     // Load the sample conversations using the same flow as multiple conversation files
@@ -635,7 +652,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({
       setJsonText(text);
       // Trigger validation
       validateJson(text);
-    } catch (err) {
+    } catch (_err) {
       // Fallback for browsers that don't support clipboard API or user denied permission
       setError("Unable to read from clipboard. Please paste manually using Ctrl/Cmd+V.");
     }
@@ -678,17 +695,17 @@ export const JsonInput: React.FC<JsonInputProps> = ({
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
       const file = files[0];
-      if (file.name.toLowerCase().endsWith('.json') || file.name.toLowerCase().endsWith('.zip')) {
+      if (file.name.toLowerCase().endsWith(".json") || file.name.toLowerCase().endsWith(".zip")) {
         // Create a proper event-like object for handleFileUpload
         const dataTransfer = new DataTransfer();
         dataTransfer.items.add(file);
-        const fakeInput = document.createElement('input');
-        fakeInput.type = 'file';
+        const fakeInput = document.createElement("input");
+        fakeInput.type = "file";
         fakeInput.files = dataTransfer.files;
         const fakeEvent = { target: fakeInput } as unknown as React.ChangeEvent<HTMLInputElement>;
         await handleFileUpload(fakeEvent);
       } else {
-        setError('Please drop a .json or .zip file');
+        setError("Please drop a .json or .zip file");
       }
     }
   };
@@ -708,30 +725,43 @@ export const JsonInput: React.FC<JsonInputProps> = ({
         <div className="flex-1 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-8 shadow-sm">
           <h1 className="text-3xl font-bold text-gray-900 mb-3">Claude Chat Viewer</h1>
           <p className="text-gray-600">
-            View your Claude conversations in a clean, readable format. Upload your entire Claude archive to browse and search through all your conversations, or paste individual chats for quick viewing.
+            View your Claude conversations in a clean, readable format. Upload your entire Claude
+            archive to browse and search through all your conversations, or paste individual chats
+            for quick viewing.
           </p>
         </div>
       </div>
 
       <div className="mb-8">
-        <h2 className="text-lg font-semibold text-gray-700 mb-3">Choose how to import your conversation:</h2>
+        <h2 className="text-lg font-semibold text-gray-700 mb-3">
+          Choose how to import your conversation:
+        </h2>
         <Tabs defaultValue="upload" className="w-full">
           <TabsList className="grid w-full grid-cols-3 h-auto p-1">
-            <TabsTrigger value="upload" className="flex flex-col sm:flex-row items-center gap-2 py-3 data-[state=active]:bg-blue-500 data-[state=active]:text-white">
+            <TabsTrigger
+              value="upload"
+              className="flex flex-col sm:flex-row items-center gap-2 py-3 data-[state=active]:bg-blue-500 data-[state=active]:text-white"
+            >
               <Archive className="h-5 w-5" />
               <div className="text-center">
                 <div className="font-medium">Upload Archive</div>
                 <div className="text-xs opacity-75 hidden sm:block">ZIP or JSON file</div>
               </div>
             </TabsTrigger>
-            <TabsTrigger value="paste" className="flex flex-col sm:flex-row items-center gap-2 py-3 data-[state=active]:bg-blue-500 data-[state=active]:text-white">
+            <TabsTrigger
+              value="paste"
+              className="flex flex-col sm:flex-row items-center gap-2 py-3 data-[state=active]:bg-blue-500 data-[state=active]:text-white"
+            >
               <Clipboard className="h-5 w-5" />
               <div className="text-center">
                 <div className="font-medium">Paste JSON</div>
                 <div className="text-xs opacity-75 hidden sm:block">Single chat</div>
               </div>
             </TabsTrigger>
-            <TabsTrigger value="sample" className="flex flex-col sm:flex-row items-center gap-2 py-3 data-[state=active]:bg-blue-500 data-[state=active]:text-white">
+            <TabsTrigger
+              value="sample"
+              className="flex flex-col sm:flex-row items-center gap-2 py-3 data-[state=active]:bg-blue-500 data-[state=active]:text-white"
+            >
               <FileJson className="h-5 w-5" />
               <div className="text-center">
                 <div className="font-medium">Try Sample</div>
@@ -740,260 +770,355 @@ export const JsonInput: React.FC<JsonInputProps> = ({
             </TabsTrigger>
           </TabsList>
 
-        <TabsContent value="upload" className="mt-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold">Upload Your Claude Export</h2>
-              <div className="prose prose-sm text-gray-600">
-                <ol className="space-y-2">
-                  <li>Get your archive from Claude: <strong>Settings → Account → Request Export</strong></li>
-                  <li>When you receive the download link, download and save the ZIP file</li>
-                  <li>Upload the ZIP file here to browse all your conversations</li>
-                </ol>
-                <p className="text-sm mt-4">
-                  <strong>Supported files:</strong> ZIP archives from Claude export or conversations.json files
-                </p>
-              </div>
-            </div>
-            <div
-              className={`border-2 border-dashed rounded-lg p-8 text-center transition-all ${
-                isDragging
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-300 hover:border-gray-400'
-              }`}
-              onDragEnter={handleDragEnter}
-              onDragLeave={handleDragLeave}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
-            >
-              {isDragging ? (
-                <div>
-                  <Upload className="h-12 w-12 mx-auto text-blue-500 mb-3" />
-                  <p className="text-lg font-medium text-blue-600">Drop your file here</p>
-                </div>
-              ) : (
-                <div>
-                  <Archive className="h-12 w-12 mx-auto text-gray-400 mb-3" />
-                  <p className="text-gray-600 mb-4">Drag and drop your ZIP or JSON file here</p>
-                  <p className="text-gray-500 text-sm mb-4">or</p>
-                  <Button onClick={handleUploadClick} className="mx-auto">
-                    <Upload className="h-4 w-4 mr-2" />
-                    Choose File
-                  </Button>
-                  <p className="text-xs text-gray-500 mt-3">
-                    Accepts .zip and .json files
+          <TabsContent value="upload" className="mt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <h2 className="text-xl font-semibold">Upload Your Claude Export</h2>
+                <div className="prose prose-sm text-gray-600">
+                  <ol className="space-y-2">
+                    <li>
+                      Get your archive from Claude:{" "}
+                      <strong>Settings → Account → Request Export</strong>
+                    </li>
+                    <li>When you receive the download link, download and save the ZIP file</li>
+                    <li>Upload the ZIP file here to browse all your conversations</li>
+                  </ol>
+                  <p className="text-sm mt-4">
+                    <strong>Supported files:</strong> ZIP archives from Claude export or
+                    conversations.json files
                   </p>
                 </div>
-              )}
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="paste" className="mt-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold">Paste Individual Conversation</h2>
-              <div className="prose prose-sm text-gray-600">
-                <p>Export a single chat from Claude and paste the JSON here.</p>
-                <p className="mt-2">
-                  See <a href="https://observablehq.com/@simonw/convert-claude-json-to-markdown"
-                    target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                    Convert Claude JSON to Markdown
-                  </a> for instructions on using the browser developer console to extract the JSON for a chat.
-                </p>
-                <p className="text-sm mt-4">
-                  <strong>Tip:</strong> Press Enter to load or use Cmd/Ctrl+V to paste
-                </p>
               </div>
-            </div>
-            <div className="space-y-4">
-              <div className={`border-2 rounded-lg overflow-hidden ${
-                isValidJson ? 'border-green-400' : jsonText.trim() && !isValidJson ? 'border-yellow-400' : 'border-gray-200'
-              }`}>
-                <div className="bg-gray-50 px-4 py-2 border-b flex justify-between items-center">
-                  <div className="text-sm">
-                    {jsonText.trim() ? (
-                      <span className="flex items-center gap-2">
-                        {isValidJson && <CheckCircle className="h-4 w-4 text-green-500" />}
-                        {jsonText.length.toLocaleString()} characters
-                        {isValidJson && <span className="text-green-600 font-medium">• Valid JSON</span>}
-                      </span>
-                    ) : (
-                      <span className="text-gray-500">Paste your JSON below</span>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    {!jsonText.trim() && typeof navigator !== 'undefined' && navigator.clipboard && (
-                      <Button
-                        onClick={handlePasteFromClipboard}
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 px-2 text-xs flex items-center gap-1"
-                        title="Paste from clipboard"
-                      >
-                        <Clipboard className="h-3 w-3" />
-                        Paste
-                      </Button>
-                    )}
-                    {jsonText.trim() && (
-                      <Button
-                        onClick={() => { setJsonText(''); setError(null); setIsValidJson(false); }}
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 px-2 text-xs"
-                      >
-                        Clear
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                <textarea
-                  className="w-full h-64 p-4 font-mono text-sm border-0 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                  value={jsonText}
-                  onChange={(e) => setJsonText(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Paste your conversation JSON here..."
-                />
-              </div>
-              <Button
-                onClick={handleSubmit}
-                className="w-full"
-                disabled={!jsonText.trim() || !isValidJson}
+              <div
+                className={`border-2 border-dashed rounded-lg p-8 text-center transition-all ${
+                  isDragging
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-300 hover:border-gray-400"
+                }`}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
               >
-                {!jsonText.trim()
-                  ? "Paste JSON to continue"
-                  : !isValidJson
-                    ? "Fix JSON errors to continue"
-                    : "Load Conversation"
-                }
-              </Button>
+                {isDragging ? (
+                  <div>
+                    <Upload className="h-12 w-12 mx-auto text-blue-500 mb-3" />
+                    <p className="text-lg font-medium text-blue-600">Drop your file here</p>
+                  </div>
+                ) : (
+                  <div>
+                    <Archive className="h-12 w-12 mx-auto text-gray-400 mb-3" />
+                    <p className="text-gray-600 mb-4">Drag and drop your ZIP or JSON file here</p>
+                    <p className="text-gray-500 text-sm mb-4">or</p>
+                    <Button onClick={handleUploadClick} className="mx-auto">
+                      <Upload className="h-4 w-4 mr-2" />
+                      Choose File
+                    </Button>
+                    <p className="text-xs text-gray-500 mt-3">Accepts .zip and .json files</p>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </TabsContent>
+          </TabsContent>
 
-        <TabsContent value="sample" className="mt-6">
-          <div className="text-center py-12">
-            <FileJson className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-            <h2 className="text-xl font-semibold mb-2">Try with Sample Data</h2>
-            <p className="text-gray-600 mb-6 max-w-md mx-auto">
-              New to Claude Chat Viewer? Load sample conversations to see how it works.
-            </p>
-            <Button onClick={loadSampleData} size="lg" className="gap-2">
-              <FileJson className="h-5 w-5" />
-              Load Sample Conversations
-            </Button>
-            <p className="text-xs text-gray-500 mt-4">
-              This will load 3 demo conversations: Python, Web Development, and Data Analysis
-            </p>
-          </div>
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="paste" className="mt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <h2 className="text-xl font-semibold">Paste Individual Conversation</h2>
+                <div className="prose prose-sm text-gray-600">
+                  <p>Export a single chat from Claude and paste the JSON here.</p>
+                  <p className="mt-2">
+                    See{" "}
+                    <a
+                      href="https://observablehq.com/@simonw/convert-claude-json-to-markdown"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
+                      Convert Claude JSON to Markdown
+                    </a>{" "}
+                    for instructions on using the browser developer console to extract the JSON for
+                    a chat.
+                  </p>
+                  <p className="text-sm mt-4">
+                    <strong>Tip:</strong> Press Enter to load or use Cmd/Ctrl+V to paste
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div
+                  className={`border-2 rounded-lg overflow-hidden ${
+                    isValidJson
+                      ? "border-green-400"
+                      : jsonText.trim() && !isValidJson
+                        ? "border-yellow-400"
+                        : "border-gray-200"
+                  }`}
+                >
+                  <div className="bg-gray-50 px-4 py-2 border-b flex justify-between items-center">
+                    <div className="text-sm">
+                      {jsonText.trim() ? (
+                        <span className="flex items-center gap-2">
+                          {isValidJson && <CheckCircle className="h-4 w-4 text-green-500" />}
+                          {jsonText.length.toLocaleString()} characters
+                          {isValidJson && (
+                            <span className="text-green-600 font-medium">• Valid JSON</span>
+                          )}
+                        </span>
+                      ) : (
+                        <span className="text-gray-500">Paste your JSON below</span>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      {!jsonText.trim() &&
+                        typeof navigator !== "undefined" &&
+                        navigator.clipboard && (
+                          <Button
+                            onClick={handlePasteFromClipboard}
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-xs flex items-center gap-1"
+                            title="Paste from clipboard"
+                          >
+                            <Clipboard className="h-3 w-3" />
+                            Paste
+                          </Button>
+                        )}
+                      {jsonText.trim() && (
+                        <Button
+                          onClick={() => {
+                            setJsonText("");
+                            setError(null);
+                            setIsValidJson(false);
+                          }}
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-xs"
+                        >
+                          Clear
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <textarea
+                    className="w-full h-64 p-4 font-mono text-sm border-0 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                    value={jsonText}
+                    onChange={(e) => setJsonText(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Paste your conversation JSON here..."
+                  />
+                </div>
+                <Button
+                  onClick={handleSubmit}
+                  className="w-full"
+                  disabled={!jsonText.trim() || !isValidJson}
+                >
+                  {!jsonText.trim()
+                    ? "Paste JSON to continue"
+                    : !isValidJson
+                      ? "Fix JSON errors to continue"
+                      : "Load Conversation"}
+                </Button>
+              </div>
+            </div>
+          </TabsContent>
 
-      {error && (
-        <Alert variant="destructive" className="mt-4 relative">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="whitespace-pre-wrap font-mono text-sm">
-            {error.split('\n').map((line, index) => {
-              // Make GitHub URLs clickable
-              if (line.includes('https://github.com/')) {
-                const urlMatch = line.match(/(.*?)(https:\/\/github\.com\/[^\s]+)(.*)/);
-                if (urlMatch) {
-                  return (
-                    <span key={index}>
-                      {urlMatch[1]}
-                      <a
-                        href={urlMatch[2]}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 underline"
-                      >
-                        {urlMatch[2]}
-                      </a>
-                      {urlMatch[3]}
-                      {'\n'}
-                    </span>
-                  );
+          <TabsContent value="sample" className="mt-6">
+            <div className="text-center py-12">
+              <FileJson className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+              <h2 className="text-xl font-semibold mb-2">Try with Sample Data</h2>
+              <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                New to Claude Chat Viewer? Load sample conversations to see how it works.
+              </p>
+              <Button onClick={loadSampleData} size="lg" className="gap-2">
+                <FileJson className="h-5 w-5" />
+                Load Sample Conversations
+              </Button>
+              <p className="text-xs text-gray-500 mt-4">
+                This will load 3 demo conversations: Python, Web Development, and Data Analysis
+              </p>
+            </div>
+          </TabsContent>
+        </Tabs>
+
+        {error && (
+          <Alert variant="destructive" className="mt-4 relative">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="whitespace-pre-wrap font-mono text-sm">
+              {error.split("\n").map((line, index) => {
+                // Make GitHub URLs clickable
+                if (line.includes("https://github.com/")) {
+                  const urlMatch = line.match(/(.*?)(https:\/\/github\.com\/[^\s]+)(.*)/);
+                  if (urlMatch) {
+                    return (
+                      <span key={index}>
+                        {urlMatch[1]}
+                        <a
+                          href={urlMatch[2]}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 underline"
+                        >
+                          {urlMatch[2]}
+                        </a>
+                        {urlMatch[3]}
+                        {"\n"}
+                      </span>
+                    );
+                  }
                 }
-              }
-              return <span key={index}>{line}{'\n'}</span>;
-            })}
-          </AlertDescription>
-          <button
-            onClick={(e) => {
-              navigator.clipboard.writeText(error);
-              // Show a brief confirmation
-              const btn = e.currentTarget;
-              const originalText = btn.textContent;
-              btn.textContent = "Copied!";
-              btn.classList.add("text-green-600");
-              setTimeout(() => {
-                btn.textContent = originalText;
-                btn.classList.remove("text-green-600");
-              }, 2000);
-            }}
-            className="absolute top-2 right-2 px-2 py-1 text-xs bg-white hover:bg-gray-50 border border-gray-300 rounded transition-colors"
-            title="Copy error message to clipboard"
-          >
-            Copy Error
-          </button>
-        </Alert>
-      )}
+                return (
+                  <span key={index}>
+                    {line}
+                    {"\n"}
+                  </span>
+                );
+              })}
+            </AlertDescription>
+            <button
+              onClick={(e) => {
+                navigator.clipboard.writeText(error);
+                // Show a brief confirmation
+                const btn = e.currentTarget;
+                const originalText = btn.textContent;
+                btn.textContent = "Copied!";
+                btn.classList.add("text-green-600");
+                setTimeout(() => {
+                  btn.textContent = originalText;
+                  btn.classList.remove("text-green-600");
+                }, 2000);
+              }}
+              className="absolute top-2 right-2 px-2 py-1 text-xs bg-white hover:bg-gray-50 border border-gray-300 rounded transition-colors"
+              title="Copy error message to clipboard"
+            >
+              Copy Error
+            </button>
+          </Alert>
+        )}
       </div>
 
       <div className="mt-6 space-y-3 text-xs text-gray-500">
         <div className="flex items-start gap-2">
-          <svg className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          <svg
+            className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+            />
           </svg>
           <p>
-            <strong>Privacy:</strong> This app runs entirely in your browser. Your conversations and files never leave your computer.
-            The app is served as static files with no backend server—we cannot see, store, or access any of your data.
+            <strong>Privacy:</strong> This app runs entirely in your browser. Your conversations and
+            files never leave your computer. The app is served as static files with no backend
+            server—we cannot see, store, or access any of your data.
           </p>
         </div>
 
         <div className="flex items-start gap-2">
-          <svg className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <svg
+            className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
           <p>
-            <strong>Note:</strong> Due to technical limitations, the app cannot currently render image attachments.
-            Also, it does not currently render LaTeX or run artifacts.
+            <strong>Note:</strong> Due to technical limitations, the app cannot currently render
+            image attachments. Also, it does not currently render LaTeX or run artifacts.
           </p>
         </div>
 
         <div className="flex items-start gap-2">
-          <svg className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+          <svg
+            className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+            />
           </svg>
           <p>
             <strong>More Tools:</strong> Check out my{" "}
-            <a href="https://osteele.com/software/web-apps/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+            <a
+              href="https://osteele.com/software/web-apps/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline"
+            >
               other web applications
             </a>{" "}
             and{" "}
-            <a href="https://osteele.com/topics/ai" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+            <a
+              href="https://osteele.com/topics/ai"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline"
+            >
               AI & LLM tools
-            </a>.
+            </a>
+            .
           </p>
         </div>
 
         <div className="flex items-start gap-2">
-          <svg className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+          <svg
+            className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
+            />
           </svg>
           <p>
             <strong>Acknowledgements:</strong> This app was <em>inspired</em> by Simon Willison's{" "}
-            <a href="https://observablehq.com/@simonw/convert-claude-json-to-markdown" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+            <a
+              href="https://observablehq.com/@simonw/convert-claude-json-to-markdown"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline"
+            >
               Convert Claude JSON to Markdown
             </a>{" "}
             tool, and (largely) <em>written</em> by{" "}
-            <a href="https://cursor.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+            <a
+              href="https://cursor.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline"
+            >
               Cursor
             </a>{" "}
             and{" "}
-            <a href="https://anthropic.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+            <a
+              href="https://anthropic.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline"
+            >
               Claude
-            </a>.
+            </a>
+            .
           </p>
         </div>
       </div>

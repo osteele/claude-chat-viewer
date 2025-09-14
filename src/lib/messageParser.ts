@@ -1,15 +1,15 @@
 type BaseSegment = {
   type: string;
   content: string;
-}
+};
 
 type TextSegment = BaseSegment & {
-  type: 'text';
-}
+  type: "text";
+};
 
 type ThinkingSegment = BaseSegment & {
-  type: 'thinking';
-}
+  type: "thinking";
+};
 
 type CodeSegment = BaseSegment & {
   type: "code";
@@ -18,17 +18,13 @@ type CodeSegment = BaseSegment & {
 };
 
 type ArtifactSegment = BaseSegment & {
-  type: 'artifact';
+  type: "artifact";
   title: string;
   identifier: string;
   artifactType: string;
-}
+};
 
-export type Segment =
-  | TextSegment
-  | ThinkingSegment
-  | CodeSegment
-  | ArtifactSegment;
+export type Segment = TextSegment | ThinkingSegment | CodeSegment | ArtifactSegment;
 
 export function parseMessage(text: string): Segment[] {
   const segments: Segment[] = [];
@@ -36,7 +32,8 @@ export function parseMessage(text: string): Segment[] {
 
   // Regex patterns
   const thinkingPattern = /<antThinking>([\s\S]*?)<\/antThinking>/g;
-  const artifactPattern = /<antArtifact\s+identifier="([^"]+)"\s+type="([^"]+)"\s+title="([^"]+)">([\s\S]*?)<\/antArtifact>/g;
+  const artifactPattern =
+    /<antArtifact\s+identifier="([^"]+)"\s+type="([^"]+)"\s+title="([^"]+)">([\s\S]*?)<\/antArtifact>/g;
   const codePattern = /```([\w-]*)(?::([^\n]+))?\n?([\s\S]*?)```/g;
 
   while (currentIndex < text.length) {
@@ -50,11 +47,7 @@ export function parseMessage(text: string): Segment[] {
     const nextArtifactIndex = artifactMatch ? artifactMatch.index : Infinity;
     const nextCodeIndex = codeMatch ? codeMatch.index : Infinity;
 
-    const nextIndex = Math.min(
-      nextThinkingIndex,
-      nextArtifactIndex,
-      nextCodeIndex
-    );
+    const nextIndex = Math.min(nextThinkingIndex, nextArtifactIndex, nextCodeIndex);
 
     if (nextIndex === Infinity) {
       // No more special segments, add remaining text
@@ -74,29 +67,29 @@ export function parseMessage(text: string): Segment[] {
     }
 
     // Add the special segment
-    if (nextIndex === nextThinkingIndex) {
+    if (nextIndex === nextThinkingIndex && thinkingMatch) {
       segments.push({
         type: "thinking",
-        content: thinkingMatch![1].trim(),
+        content: thinkingMatch[1].trim(),
       });
-      currentIndex = thinkingMatch!.index + thinkingMatch![0].length;
-    } else if (nextIndex === nextCodeIndex) {
+      currentIndex = thinkingMatch.index + thinkingMatch[0].length;
+    } else if (nextIndex === nextCodeIndex && codeMatch) {
       segments.push({
         type: "code",
-        language: codeMatch![1] || "text",  // Default to "text" if no language specified
-        path: codeMatch![2],
-        content: codeMatch![3].trim(),
+        language: codeMatch[1] || "text", // Default to "text" if no language specified
+        path: codeMatch[2],
+        content: codeMatch[3].trim(),
       });
-      currentIndex = codeMatch!.index + codeMatch![0].length;
-    } else {
+      currentIndex = codeMatch.index + codeMatch[0].length;
+    } else if (artifactMatch) {
       segments.push({
         type: "artifact",
-        identifier: artifactMatch![1],
-        artifactType: artifactMatch![2],
-        title: artifactMatch![3],
-        content: artifactMatch![4].trim(),
+        identifier: artifactMatch[1],
+        artifactType: artifactMatch[2],
+        title: artifactMatch[3],
+        content: artifactMatch[4].trim(),
       });
-      currentIndex = artifactMatch!.index + artifactMatch![0].length;
+      currentIndex = artifactMatch.index + artifactMatch[0].length;
     }
 
     // Reset regex indices

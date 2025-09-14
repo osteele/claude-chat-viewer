@@ -26,7 +26,7 @@
         "files": []
       },
       {
-        "uuid": "msg-2", 
+        "uuid": "msg-2",
         "index": 1,
         "sender": "assistant",
         "content": [
@@ -45,7 +45,7 @@
     ]
   },
   {
-    "uuid": "test-conv-2", 
+    "uuid": "test-conv-2",
     "name": "Test Conversation 2",
     "created_at": "2024-12-02T14:00:00Z",
     "updated_at": "2024-12-02T14:30:00Z",
@@ -90,7 +90,7 @@
       {
         "uuid": "msg-5",
         "index": 2,
-        "sender": "human", 
+        "sender": "human",
         "content": [
           {
             "type": "text",

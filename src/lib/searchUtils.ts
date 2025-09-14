@@ -1,4 +1,4 @@
-import { ChatData } from "../schemas/chat";
+import type { ChatData } from "../schemas/chat";
 
 export interface SearchMatch {
   text: string;
@@ -16,7 +16,7 @@ export function findSearchMatches(
   searchQuery: string,
   useRegex: boolean = false,
   caseSensitive: boolean = false,
-  maxMatches: number = 3
+  maxMatches: number = 3,
 ): SearchMatch[] {
   if (!searchQuery.trim()) {
     return [];
@@ -26,12 +26,12 @@ export function findSearchMatches(
 
   try {
     let searchPattern: RegExp;
-    
+
     if (useRegex) {
       searchPattern = new RegExp(searchQuery, caseSensitive ? "g" : "gi");
     } else {
       // Escape special regex characters for literal search
-      const escapedQuery = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const escapedQuery = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       searchPattern = new RegExp(escapedQuery, caseSensitive ? "g" : "gi");
     }
 
@@ -40,26 +40,26 @@ export function findSearchMatches(
 
       message.content.forEach((item) => {
         if (matches.length >= maxMatches) return;
-        
+
         if (item.type === "text") {
           const text = item.text;
           const searchMatches = Array.from(text.matchAll(searchPattern));
-          
+
           for (const match of searchMatches) {
             if (matches.length >= maxMatches) break;
-            
+
             const matchIndex = match.index || 0;
             const matchText = match[0];
-            
+
             // Extract context before and after the match
             const beforeStart = Math.max(0, matchIndex - CONTEXT_LENGTH);
             const beforeText = text.substring(beforeStart, matchIndex);
-            const beforeContext = beforeStart > 0 ? "..." + beforeText : beforeText;
-            
+            const beforeContext = beforeStart > 0 ? `...${beforeText}` : beforeText;
+
             const afterEnd = Math.min(text.length, matchIndex + matchText.length + CONTEXT_LENGTH);
             const afterText = text.substring(matchIndex + matchText.length, afterEnd);
-            const afterContext = afterEnd < text.length ? afterText + "..." : afterText;
-            
+            const afterContext = afterEnd < text.length ? `${afterText}...` : afterText;
+
             matches.push({
               text: text,
               before: beforeContext,
@@ -78,4 +78,3 @@ export function findSearchMatches(
 
   return matches;
 }
-

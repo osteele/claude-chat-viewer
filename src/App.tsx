@@ -1,9 +1,7 @@
-import ChatViewer from './components/ChatViewer'
+import ChatViewer from "./components/ChatViewer";
 
 function App() {
-  return (
-    <ChatViewer />
-  )
+  return <ChatViewer />;
 }
 
-export default App
+export default App;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 // import { render, screen, fireEvent } from "@testing-library/react";
 // import { ConversationBrowser } from "./ConversationBrowser";
-import { ChatData } from "../schemas/chat";
+import type { ChatData } from "../schemas/chat";
 
 // Mock data
 const mockConversations: ChatData[] = [
@@ -20,9 +20,9 @@ const mockConversations: ChatData[] = [
         text: "Hello",
         created_at: "2024-12-01T12:00:00Z",
         updated_at: "2024-12-01T12:00:00Z",
-        truncated: false
-      }
-    ]
+        truncated: false,
+      },
+    ],
   },
   {
     uuid: "conv-2",
@@ -39,7 +39,7 @@ const mockConversations: ChatData[] = [
         text: "Hi there!",
         created_at: "2024-12-02T10:00:00Z",
         updated_at: "2024-12-02T10:00:00Z",
-        truncated: false
+        truncated: false,
       },
       {
         uuid: "msg-3",
@@ -49,10 +49,10 @@ const mockConversations: ChatData[] = [
         text: "How are you?",
         created_at: "2024-12-02T10:30:00Z",
         updated_at: "2024-12-02T10:30:00Z",
-        truncated: false
-      }
-    ]
-  }
+        truncated: false,
+      },
+    ],
+  },
 ];
 
 describe("ConversationBrowser", () => {
@@ -71,7 +71,7 @@ describe("ConversationBrowser", () => {
 
   it("should have proper conversation structure for conversion", () => {
     const conversation = mockConversations[0];
-    
+
     // Should have all required fields for conversion to ChatData
     expect(conversation.uuid).toBeDefined();
     expect(conversation.name).toBeDefined();
