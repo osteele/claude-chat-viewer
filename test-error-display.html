@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Error Display</title>
+</head>
+<body>
+    <h1>Test Error Display Condensation</h1>
+    <p>This page tests that:</p>
+    <ol>
+        <li>The UI shows a condensed error message</li>
+        <li>The Copy button copies the FULL error details</li>
+    </ol>
+
+    <h2>Instructions:</h2>
+    <ol>
+        <li>Open <a href="http://localhost:5174/" target="_blank">http://localhost:5174/</a></li>
+        <li>Upload the file: <code>testdata/conversations-multiple-errors.json</code></li>
+        <li>Verify the error display shows:
+            <ul>
+                <li>Summary line (❌ Partially loaded...)</li>
+                <li>Error count line</li>
+                <li>First conversation error with 1-2 validation details</li>
+                <li>"[More errors hidden...]" message if there are more errors</li>
+                <li>Bug reporting section with GitHub links</li>
+            </ul>
+        </li>
+        <li>Click "Copy Error" button</li>
+        <li>Paste into a text editor</li>
+        <li>Verify the pasted text contains ALL error details for all invalid conversations</li>
+    </ol>
+
+    <h2>Expected Condensed Display:</h2>
+    <pre>
+❌ Partially loaded: 3 of 5 conversations were valid.
+2 conversation(s) had validation errors and were skipped:
+
+• Missing chat_messages:
+  - At "chat_messages": Message content is required
+
+[More errors hidden - click Copy Error for full details]
+
+🐛 Unexpected error?
+If this file was downloaded directly from Claude's export feature:
+1. Check existing issues: https://github.com/osteele/claude-chat-viewer/issues
+2. Report new issue: https://github.com/osteele/claude-chat-viewer/issues/new
+    </pre>
+
+    <h2>Expected Copied Text (Full Details):</h2>
+    <pre>
+❌ Partially loaded: 3 of 5 conversations were valid.
+
+2 conversation(s) had validation errors and were skipped:
+
+• Missing chat_messages:
+  - At "chat_messages": Required
+
+• Malformed messages:
+  - At "chat_messages.0.content": Message content must be an array
+
+🐛 Unexpected error?
+If this file was downloaded directly from Claude's export feature:
+1. Check existing issues: https://github.com/osteele/claude-chat-viewer/issues
+2. Report new issue: https://github.com/osteele/claude-chat-viewer/issues/new
+    </pre>
+</body>
+</html>

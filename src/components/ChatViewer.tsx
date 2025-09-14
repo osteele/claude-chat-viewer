@@ -22,6 +22,15 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking, artifa
   const isHuman = message.sender === "human";
 
   const renderContent = (content: ChatMessage["content"]) => {
+    // Safety check for content
+    if (!content || !Array.isArray(content)) {
+      console.error('Invalid content in message:', message.uuid, content);
+      return (
+        <div className="p-4 text-red-600">
+          Error: Invalid message content format
+        </div>
+      );
+    }
     return content.map((item, index) => {
       if (item.type === "tool_use") {
         const key = `${message.uuid}-tool-${item.input.id}`;
@@ -40,9 +49,26 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking, artifa
       }
 
       if (item.type === "text") {
-        const segments = isHuman
-          ? [{ type: "text" as const, content: item.text }]
-          : parseMessage(item.text);
+        // Safety check for text content
+        if (typeof item.text !== 'string') {
+          console.error('Invalid text content in message:', message.uuid, item);
+          return (
+            <div key={index} className="p-4 text-red-600">
+              Error: Invalid text content (expected string, got {typeof item.text})
+            </div>
+          );
+        }
+
+        let segments;
+        try {
+          segments = isHuman
+            ? [{ type: "text" as const, content: item.text }]
+            : parseMessage(item.text);
+        } catch (error) {
+          console.error('Error parsing message:', error, item.text);
+          // Fallback to plain text rendering
+          segments = [{ type: "text" as const, content: item.text }];
+        }
 
         return (
           <div key={index} className="max-w-none p-4">
@@ -270,6 +296,81 @@ const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
   const [downloadSuccess, setDownloadSuccess] = useState(false);
   const [printSuccess, setPrintSuccess] = useState(false);
   const [downloadArtifactsSuccess, setDownloadArtifactsSuccess] = useState(false);
+  const [diagnosticReport, setDiagnosticReport] = useState<string | null>(null);
+
+  // Generate diagnostic report
+  const generateDiagnosticReport = () => {
+    const report: string[] = [];
+    report.push('=== CLAUDE CHAT VIEWER DIAGNOSTIC REPORT ===');
+    report.push(`Generated: ${new Date().toISOString()}`);
+    report.push('');
+
+    // Browser info
+    report.push('Browser Information:');
+    report.push(`  User Agent: ${navigator.userAgent}`);
+    report.push(`  Platform: ${navigator.platform}`);
+    report.push(`  Language: ${navigator.language}`);
+    report.push('');
+
+    // Data structure info
+    report.push('Conversation Data:');
+    report.push(`  Name: ${data.name || 'Untitled'}`);
+    report.push(`  UUID: ${data.uuid}`);
+    report.push(`  Messages: ${data.chat_messages?.length || 0}`);
+    report.push(`  Created: ${data.created_at}`);
+    report.push(`  Updated: ${data.updated_at}`);
+    report.push('');
+
+    // Message analysis
+    if (data.chat_messages && data.chat_messages.length > 0) {
+      report.push('Message Analysis:');
+      const senderCounts = { human: 0, assistant: 0 };
+      const contentTypes = new Set<string>();
+      let errorCount = 0;
+
+      data.chat_messages.forEach((msg, idx) => {
+        senderCounts[msg.sender]++;
+
+        if (!msg.content || !Array.isArray(msg.content)) {
+          errorCount++;
+          report.push(`  ERROR: Message ${idx + 1} has invalid content structure`);
+        } else {
+          msg.content.forEach(item => {
+            contentTypes.add(item.type);
+          });
+        }
+      });
+
+      report.push(`  Human messages: ${senderCounts.human}`);
+      report.push(`  Assistant messages: ${senderCounts.assistant}`);
+      report.push(`  Content types found: ${Array.from(contentTypes).join(', ')}`);
+      if (errorCount > 0) {
+        report.push(`  Messages with errors: ${errorCount}`);
+      }
+
+      // Sample first message
+      report.push('');
+      report.push('First Message Sample:');
+      const firstMsg = data.chat_messages[0];
+      report.push(`  Sender: ${firstMsg.sender}`);
+      report.push(`  Content items: ${firstMsg.content?.length || 0}`);
+      if (firstMsg.content && firstMsg.content.length > 0) {
+        const firstContent = firstMsg.content[0];
+        report.push(`  First content type: ${firstContent.type}`);
+        if (firstContent.type === 'text' && 'text' in firstContent) {
+          report.push(`  Text preview (50 chars): ${firstContent.text.substring(0, 50)}...`);
+        }
+      }
+    }
+
+    report.push('');
+    report.push('=== END OF REPORT ===');
+
+    const reportText = report.join('\n');
+    setDiagnosticReport(reportText);
+    console.log(reportText);
+    return reportText;
+  };
 
   // Update window title when conversation is loaded
   useEffect(() => {
@@ -288,11 +389,47 @@ const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
   
   // Pre-collect all artifacts to assign consistent numbers
   if (!data.chat_messages) {
+    console.error('No chat_messages found in data:', data);
     return (
       <div className="p-8 text-center">
         <div className="text-red-600 mb-2">Error: Invalid conversation data</div>
         <div className="text-gray-600 text-sm">
           The loaded data does not contain valid chat messages. Please ensure you're loading a properly formatted conversation file.
+        </div>
+        <details className="mt-4">
+          <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-700">Technical details</summary>
+          <div className="mt-2 p-3 bg-gray-50 rounded text-left">
+            <p className="text-xs font-mono text-gray-600">
+              Data structure: {JSON.stringify(Object.keys(data), null, 2)}
+            </p>
+            <p className="text-xs text-gray-600 mt-2">
+              Expected: chat_messages array with conversation data
+            </p>
+          </div>
+        </details>
+      </div>
+    );
+  }
+
+  // Additional validation
+  if (!Array.isArray(data.chat_messages)) {
+    console.error('chat_messages is not an array:', typeof data.chat_messages);
+    return (
+      <div className="p-8 text-center">
+        <div className="text-red-600 mb-2">Error: Invalid message format</div>
+        <div className="text-gray-600 text-sm">
+          The chat_messages field is not in the expected format (array).
+        </div>
+      </div>
+    );
+  }
+
+  if (data.chat_messages.length === 0) {
+    return (
+      <div className="p-8 text-center">
+        <div className="text-yellow-600 mb-2">Empty conversation</div>
+        <div className="text-gray-600 text-sm">
+          This conversation contains no messages.
         </div>
       </div>
     );
@@ -496,6 +633,42 @@ const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
             )}
           </div>
 
+          {/* Diagnostic Report */}
+          <div className="mb-2">
+            <button
+              onClick={() => generateDiagnosticReport()}
+              className="text-xs text-blue-600 hover:text-blue-800 underline"
+            >
+              Generate Diagnostic Report
+            </button>
+            {diagnosticReport && (
+              <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-xs font-semibold text-blue-700">Diagnostic Report</h3>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(diagnosticReport);
+                      }}
+                      className="text-xs text-blue-600 hover:text-blue-800"
+                    >
+                      Copy
+                    </button>
+                    <button
+                      onClick={() => setDiagnosticReport(null)}
+                      className="text-xs text-gray-500 hover:text-gray-700"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+                <pre className="text-xs font-mono text-blue-600 whitespace-pre-wrap max-h-48 overflow-y-auto">
+                  {diagnosticReport}
+                </pre>
+              </div>
+            )}
+          </div>
+
           {/* Display Options (Collapsible) */}
           <details className="group">
             <summary className="cursor-pointer text-xs text-gray-500 hover:text-gray-700 select-none flex items-center gap-1.5 transition-colors">
@@ -638,6 +811,8 @@ const ChatViewer: React.FC = () => {
   const [conversationList, setConversationList] = useState<ChatData[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadWarning, setLoadWarning] = useState<string | null>(null);
+  const [fullErrorDetails, setFullErrorDetails] = useState<string | null>(null);
   const [isNavigating, setIsNavigating] = useState(false);
   const [useMasterDetail] = useState(true); // Default to master-detail view
 
@@ -673,8 +848,81 @@ const ChatViewer: React.FC = () => {
     updateURL("view", data.uuid);
   };
 
-  const handleConversationList = (conversations: ChatData[]) => {
+  const handleConversationList = (conversations: ChatData[], warning?: string) => {
     setConversationList(conversations);
+
+    if (warning) {
+      // Store full details for copying
+      setFullErrorDetails(warning);
+
+      // Create a condensed version for UI display
+      const lines = warning.split('\n');
+      const condensedLines: string[] = [];
+
+      // Find and add the summary line (first line that starts with ❌)
+      const summaryLine = lines.find(line => line.startsWith('❌'));
+      if (summaryLine) {
+        condensedLines.push(summaryLine);
+      }
+
+      // Find and add error count line (if different from summary)
+      const errorCountLine = lines.find(line =>
+        line.includes('conversation(s) had validation errors') &&
+        line !== summaryLine
+      );
+      if (errorCountLine) {
+        condensedLines.push(errorCountLine);
+      }
+
+      // Include first error details only
+      let foundFirstError = false;
+      let errorLineCount = 0;
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (line.startsWith('• ')) {
+          if (!foundFirstError) {
+            foundFirstError = true;
+            condensedLines.push('');  // Add blank line before error details
+            condensedLines.push(line);
+            // Include next 2 lines of error details
+            for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
+              if (lines[j].includes('At "')) {
+                condensedLines.push(lines[j]);
+                errorLineCount++;
+                if (errorLineCount >= 2) break;
+              }
+            }
+          }
+          break;
+        }
+      }
+
+      // Check if there are more errors beyond the first
+      let errorCount = 0;
+      lines.forEach(line => {
+        if (line.startsWith('• ')) errorCount++;
+      });
+
+      if (errorCount > 1) {
+        condensedLines.push('\n[More errors hidden - click Copy Error for full details]');
+      }
+
+      // Always include the bug report section
+      const bugReportIndex = lines.findIndex(line => line.includes('🐛 Unexpected error?'));
+      if (bugReportIndex !== -1) {
+        condensedLines.push('');
+        for (let i = bugReportIndex; i < Math.min(bugReportIndex + 4, lines.length); i++) {
+          if (lines[i]) condensedLines.push(lines[i]);
+        }
+      }
+
+      setLoadWarning(condensedLines.join('\n'));
+      console.log('Warning received in ChatViewer:', warning);
+    } else {
+      setLoadWarning(null);
+    setFullErrorDetails(null);
+      setFullErrorDetails(null);
+    }
     setChatData(null);
     // Use master-detail view when enabled
     if (useMasterDetail) {
@@ -702,6 +950,8 @@ const ChatViewer: React.FC = () => {
   const handleBackToInput = () => {
     setConversationList(null);
     setChatData(null);
+    setLoadWarning(null);
+    setFullErrorDetails(null);
     setActiveTab("json");
     updateURL("json");
   };
@@ -782,19 +1032,27 @@ const ChatViewer: React.FC = () => {
             }
             
             // Multiple conversations - validate each as ChatData and show browser
-            const validConversations = data.filter(conversation => {
+            const validConversations: ChatData[] = [];
+            const invalidConversations: { index: number; error: string }[] = [];
+
+            data.forEach((conversation, index) => {
               const result = ChatDataSchema.safeParse(conversation);
-              return result.success;
+              if (result.success) {
+                validConversations.push(result.data);
+              } else {
+                const errorMessage = result.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ');
+                invalidConversations.push({ index, error: errorMessage });
+                console.error(`Conversation ${index + 1} validation failed:`, result.error.errors);
+              }
             });
-            
+
             if (validConversations.length === 0) {
-              setLoadError("No valid conversations found in the file.");
+              setLoadError("No valid conversations found in the file. Check console for details.");
               return;
             }
-            
-            // Only log a summary if some conversations were invalid
-            if (validConversations.length < data.length) {
-              console.info(`Loaded ${validConversations.length} of ${data.length} conversations`);
+
+            if (invalidConversations.length > 0) {
+              console.warn(`Loaded ${validConversations.length} of ${data.length} conversations. ${invalidConversations.length} had errors.`);
             }
             
             // Show conversation browser with valid conversations
@@ -861,6 +1119,8 @@ const ChatViewer: React.FC = () => {
                 setActiveTab("json");
                 setChatData(null);
                 setConversationList(null);
+                setLoadWarning(null);
+    setFullErrorDetails(null);
                 updateURL("json");
                 window.scrollTo(0, 0);
               }}
@@ -936,9 +1196,69 @@ const ChatViewer: React.FC = () => {
         <div className="print:hidden">
           {loadError && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
-              <p className="text-red-700">Error loading file: {loadError}</p>
+              <p className="text-red-700 font-semibold">Error loading file:</p>
+              <p className="text-red-600 mt-1">{loadError}</p>
+              <details className="mt-2">
+                <summary className="cursor-pointer text-sm text-red-500 hover:text-red-700">Troubleshooting tips</summary>
+                <ul className="mt-2 text-sm text-red-600 list-disc list-inside space-y-1">
+                  <li>Ensure the JSON file is properly formatted</li>
+                  <li>Check that the file contains valid Claude conversation data</li>
+                  <li>For large files (&gt;10MB), loading may take longer</li>
+                  <li>Check browser console (F12) for detailed error messages</li>
+                  <li>Enable debug mode below to see more information</li>
+                </ul>
+              </details>
             </div>
           )}
+
+          {loadWarning && activeTab !== "json" && activeTab !== "master-detail" && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md relative" style={{ minHeight: 'auto' }}>
+              <div className="text-red-700 whitespace-pre-wrap font-mono text-sm overflow-visible">
+                {loadWarning.split('\n').map((line, index) => {
+                  // Make GitHub URLs clickable
+                  if (line.includes('https://github.com/')) {
+                    const urlMatch = line.match(/(.*?)(https:\/\/github\.com\/[^\s]+)(.*)/);
+                    if (urlMatch) {
+                      return (
+                        <span key={index}>
+                          {urlMatch[1]}
+                          <a
+                            href={urlMatch[2]}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800 underline"
+                          >
+                            {urlMatch[2]}
+                          </a>
+                          {urlMatch[3]}
+                          {'\n'}
+                        </span>
+                      );
+                    }
+                  }
+                  return <span key={index}>{line}{'\n'}</span>;
+                })}
+              </div>
+              <button
+                onClick={(e) => {
+                  navigator.clipboard.writeText(fullErrorDetails || loadWarning);
+                  const btn = e.currentTarget;
+                  const originalText = btn.textContent;
+                  btn.textContent = "Copied!";
+                  btn.classList.add("text-green-600");
+                  setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.classList.remove("text-green-600");
+                  }, 2000);
+                }}
+                className="absolute top-2 right-2 px-2 py-1 text-xs bg-white hover:bg-gray-50 border border-gray-300 rounded transition-colors"
+                title="Copy error message to clipboard"
+              >
+                Copy Error
+              </button>
+            </div>
+          )}
+
           
           {isLoading ? (
             <div className="p-8 text-center text-gray-500">
@@ -947,18 +1267,67 @@ const ChatViewer: React.FC = () => {
           ) : activeTab === "json" ? (
             <JsonInput onValidJson={handleValidJson} onConversationList={handleConversationList} />
           ) : activeTab === "master-detail" && conversationList ? (
-            <div className="fixed inset-0 top-[49px]">
-              <MasterDetailView
-                conversations={conversationList}
-                selectedConversation={chatData}
-                onSelectConversation={(conversation) => {
-                  setChatData(conversation);
-                  updateURL("view", conversation.uuid);
-                }}
-                onBack={handleBackToInput}
-              >
-                {chatData && <ConversationView data={chatData} />}
-              </MasterDetailView>
+            <div className="fixed inset-0 top-[49px] flex flex-col">
+              {loadWarning && (
+                <div className="p-4 bg-red-50 border-b border-red-200 relative flex-shrink-0">
+                  <div className="text-red-700 whitespace-pre-wrap font-mono text-sm overflow-visible">
+                    {loadWarning.split('\n').map((line, index) => {
+                      // Make GitHub URLs clickable
+                      if (line.includes('https://github.com/')) {
+                        const urlMatch = line.match(/(.*?)(https:\/\/github\.com\/[^\s]+)(.*)/);
+                        if (urlMatch) {
+                          return (
+                            <span key={index}>
+                              {urlMatch[1]}
+                              <a
+                                href={urlMatch[2]}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:text-blue-800 underline"
+                              >
+                                {urlMatch[2]}
+                              </a>
+                              {urlMatch[3]}
+                              {'\n'}
+                            </span>
+                          );
+                        }
+                      }
+                      return <span key={index}>{line}{'\n'}</span>;
+                    })}
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      navigator.clipboard.writeText(fullErrorDetails || loadWarning);
+                      const btn = e.currentTarget;
+                      const originalText = btn.textContent;
+                      btn.textContent = "Copied!";
+                      btn.classList.add("text-green-600");
+                      setTimeout(() => {
+                        btn.textContent = originalText;
+                        btn.classList.remove("text-green-600");
+                      }, 2000);
+                    }}
+                    className="absolute top-2 right-2 px-2 py-1 text-xs bg-white hover:bg-gray-50 border border-gray-300 rounded transition-colors"
+                    title="Copy error message to clipboard"
+                  >
+                    Copy Error
+                  </button>
+                </div>
+              )}
+              <div className="flex-1 overflow-hidden">
+                <MasterDetailView
+                  conversations={conversationList}
+                  selectedConversation={chatData}
+                  onSelectConversation={(conversation) => {
+                    setChatData(conversation);
+                    updateURL("view", conversation.uuid);
+                  }}
+                  onBack={handleBackToInput}
+                >
+                  {chatData && <ConversationView data={chatData} />}
+                </MasterDetailView>
+              </div>
             </div>
           ) : activeTab === "browse" && conversationList ? (
             <ConversationBrowser

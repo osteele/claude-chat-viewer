@@ -1,0 +1,170 @@
+{
+  "uuid": "test-conv-render-errors",
+  "name": "Test Conversation with Rendering Issues",
+  "summary": "A test conversation to debug rendering issues",
+  "created_at": "2024-01-15T10:00:00Z",
+  "updated_at": "2024-01-15T11:00:00Z",
+  "settings": {
+    "preview_feature_uses_artifacts": true,
+    "preview_feature_uses_latex": false,
+    "enabled_artifacts_attachments": true
+  },
+  "is_starred": false,
+  "current_leaf_message_uuid": "msg-5",
+  "chat_messages": [
+    {
+      "uuid": "msg-1",
+      "index": 0,
+      "sender": "human",
+      "content": [
+        {
+          "type": "text",
+          "text": "This is a normal message that should render correctly."
+        }
+      ],
+      "text": "This is a normal message that should render correctly.",
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z",
+      "truncated": false
+    },
+    {
+      "uuid": "msg-2",
+      "index": 1,
+      "sender": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "This message has code blocks:\n\n```python\ndef hello():\n    print('Hello, World!')\n```\n\nAnd inline `code` as well."
+        }
+      ],
+      "text": "This message has code blocks and inline code.",
+      "created_at": "2024-01-15T10:01:00Z",
+      "updated_at": "2024-01-15T10:01:00Z",
+      "truncated": false
+    },
+    {
+      "uuid": "msg-3",
+      "index": 2,
+      "sender": "human",
+      "content": [],
+      "text": "This message has empty content array - should show as empty",
+      "created_at": "2024-01-15T10:02:00Z",
+      "updated_at": "2024-01-15T10:02:00Z",
+      "truncated": false
+    },
+    {
+      "uuid": "msg-4",
+      "index": 3,
+      "sender": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": ""
+        }
+      ],
+      "text": "This message has empty text in content item",
+      "created_at": "2024-01-15T10:03:00Z",
+      "updated_at": "2024-01-15T10:03:00Z",
+      "truncated": false
+    },
+    {
+      "uuid": "msg-5",
+      "index": 4,
+      "sender": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "<antThinking>This is a thinking block that might not render on some systems</antThinking>\n\nHere's a response with an artifact:\n\n<antArtifact identifier=\"test-artifact\" type=\"text/html\" title=\"Test HTML Page\">\n<!DOCTYPE html>\n<html>\n<head><title>Test</title></head>\n<body><h1>Hello World</h1></body>\n</html>\n</antArtifact>"
+        }
+      ],
+      "text": "Message with thinking and artifact blocks",
+      "created_at": "2024-01-15T10:04:00Z",
+      "updated_at": "2024-01-15T10:04:00Z",
+      "truncated": false
+    },
+    {
+      "uuid": "msg-6",
+      "index": 5,
+      "sender": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "Message with very long code block:\n\n```javascript\n// This is a very long code block to test scrolling\nfunction complexFunction() {\n    const data = [\n        { id: 1, name: 'Alice', age: 30 },\n        { id: 2, name: 'Bob', age: 25 },\n        { id: 3, name: 'Charlie', age: 35 },\n        { id: 4, name: 'David', age: 28 },\n        { id: 5, name: 'Eve', age: 32 },\n    ];\n\n    const processedData = data\n        .filter(person => person.age >= 30)\n        .map(person => ({\n            ...person,\n            category: person.age >= 35 ? 'senior' : 'junior',\n            salary: person.age * 1000\n        }))\n        .sort((a, b) => b.salary - a.salary);\n\n    console.log('Processed data:', processedData);\n\n    // More complex logic here\n    for (let i = 0; i < processedData.length; i++) {\n        const person = processedData[i];\n        console.log(`Person ${i + 1}: ${person.name} (${person.category})`);\n    }\n\n    return processedData;\n}\n```"
+        }
+      ],
+      "text": "Message with long code block",
+      "created_at": "2024-01-15T10:05:00Z",
+      "updated_at": "2024-01-15T10:05:00Z",
+      "truncated": false
+    },
+    {
+      "uuid": "msg-7",
+      "index": 6,
+      "sender": "assistant",
+      "content": [
+        {
+          "type": "tool_use",
+          "name": "create_artifact",
+          "input": {
+            "id": "test-js-artifact",
+            "type": "application/javascript",
+            "title": "JavaScript Example",
+            "command": "create",
+            "content": "// JavaScript artifact\nconst greeting = 'Hello, World!';\nconsole.log(greeting);\n\nfunction fibonacci(n) {\n    if (n <= 1) return n;\n    return fibonacci(n - 1) + fibonacci(n - 2);\n}\n\nconsole.log('Fibonacci(10):', fibonacci(10));",
+            "language": "javascript",
+            "version_uuid": "v1"
+          }
+        }
+      ],
+      "text": "Tool use message with JavaScript artifact",
+      "created_at": "2024-01-15T10:06:00Z",
+      "updated_at": "2024-01-15T10:06:00Z",
+      "truncated": false
+    },
+    {
+      "uuid": "msg-8",
+      "index": 7,
+      "sender": "human",
+      "content": [
+        {
+          "type": "text",
+          "text": "Testing special characters: <>&\"'`\\n\\t and unicode: 你好世界 🎉 émojis"
+        }
+      ],
+      "text": "Testing special characters and unicode",
+      "created_at": "2024-01-15T10:07:00Z",
+      "updated_at": "2024-01-15T10:07:00Z",
+      "truncated": false
+    },
+    {
+      "uuid": "msg-9",
+      "index": 8,
+      "sender": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "Multiple code blocks in one message:\n\n```python\n# Python code\ndef greet(name):\n    return f'Hello, {name}!'\n```\n\n```javascript\n// JavaScript code\nfunction greet(name) {\n    return `Hello, ${name}!`;\n}\n```\n\n```bash\n# Bash code\necho \"Hello, $USER!\"\n```"
+        }
+      ],
+      "text": "Multiple code blocks",
+      "created_at": "2024-01-15T10:08:00Z",
+      "updated_at": "2024-01-15T10:08:00Z",
+      "truncated": false
+    },
+    {
+      "uuid": "msg-10",
+      "index": 9,
+      "sender": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "This is a message with **bold**, *italic*, and ***bold italic*** formatting.\n\nIt also has:\n- Bullet points\n- Multiple items\n  - Nested items\n  - More nesting\n\n1. Numbered lists\n2. Second item\n3. Third item\n\n> And a blockquote\n> That spans multiple lines"
+        }
+      ],
+      "text": "Testing markdown formatting",
+      "created_at": "2024-01-15T10:09:00Z",
+      "updated_at": "2024-01-15T10:09:00Z",
+      "truncated": false
+    }
+  ]
+}

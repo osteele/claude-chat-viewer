@@ -28,7 +28,7 @@ type ConversationOption = {
 
 interface JsonInputProps {
   onValidJson: (data: ChatData) => void;
-  onConversationList: (conversations: ChatData[]) => void;
+  onConversationList: (conversations: ChatData[], warning?: string) => void;
 }
 
 export const JsonInput: React.FC<JsonInputProps> = ({
@@ -110,30 +110,235 @@ export const JsonInput: React.FC<JsonInputProps> = ({
       }
 
       // Validate each conversation in the array as ChatData
-      const validConversations = data
-        .map((conversation: any) => ChatDataSchema.safeParse(conversation))
-        .filter((result: any) => result.success)
-        .map((result: any) => result.data);
+      const validationResults = data.map((conversation: any, index: number) => {
+        const result = ChatDataSchema.safeParse(conversation);
+        if (!result.success) {
+          const convName = conversation?.name || `Conversation ${index + 1}`;
+          console.error(`Validation failed for ${convName}:`);
+
+          // Log errors in readable format
+          const errors: string[] = [];
+          result.error.errors.forEach((err: any) => {
+            if (err.code === "invalid_union" && err.unionErrors) {
+              err.unionErrors.forEach((unionError: any) => {
+                if (unionError.errors && unionError.errors.length > 0) {
+                  unionError.errors.slice(0, 3).forEach((e: any) => {
+                    const path = e.path.join('.');
+                    const message = e.message || "Required field missing";
+                    if (path) {
+                      errors.push(`  - ${path}: ${message}`);
+                    }
+                  });
+                }
+              });
+            } else {
+              const path = err.path.join('.');
+              const message = err.message || "Validation error";
+              if (path) {
+                errors.push(`  - ${path}: ${message}`);
+              }
+            }
+          });
+
+          if (errors.length > 0) {
+            console.error(errors.slice(0, 5).join('\n'));
+            if (errors.length > 5) {
+              console.error(`  ... and ${errors.length - 5} more errors`);
+            }
+          }
+        }
+        return { index, result, conversation };
+      });
+
+      const validConversations = validationResults
+        .filter((item: any) => item.result.success)
+        .map((item: any) => item.result.data);
+
+      const invalidConversations = validationResults
+        .filter((item: any) => !item.result.success);
 
       if (validConversations.length > 1) {
         // Multiple valid conversations - show conversation browser
-        onConversationList(validConversations);
+        let warningMsg: string | undefined;
+        if (invalidConversations.length > 0) {
+          const errorDetails: string[] = [];
+          errorDetails.push(`❌ Partially loaded: ${validConversations.length} of ${data.length} conversations were valid.\n`);
+          errorDetails.push(`${invalidConversations.length} conversation(s) had validation errors and were skipped:\n`);
+
+          // Show details of first few invalid conversations
+          invalidConversations.slice(0, 3).forEach((item: any) => {
+            const convName = item.conversation?.name || `Conversation ${item.index + 1}`;
+            errorDetails.push(`\n• ${convName}:`);
+
+            // Get the actual validation errors
+            if (item.result && item.result.error && item.result.error.errors) {
+              const errors = item.result.error.errors;
+
+              // Process union errors to get actual validation details
+              const processedErrors: string[] = [];
+              errors.forEach((err: any) => {
+                if (err.code === "invalid_union" && err.unionErrors) {
+                  // Extract errors from union attempts
+                  err.unionErrors.forEach((unionError: any) => {
+                    if (unionError.errors && unionError.errors.length > 0) {
+                      unionError.errors.slice(0, 2).forEach((e: any) => {
+                        const path = e.path.join('.');
+                        if (path && e.message !== "Invalid input") {
+                          processedErrors.push(`  - At "${path}": ${e.message}`);
+                        }
+                      });
+                    }
+                  });
+                } else {
+                  const path = err.path.join('.');
+                  const message = err.message === "Invalid input" ? "Invalid data format" : err.message;
+                  if (path) {
+                    processedErrors.push(`  - At "${path}": ${message}`);
+                  } else {
+                    processedErrors.push(`  - ${message}`);
+                  }
+                }
+              });
+
+              // Add the first few processed errors
+              if (processedErrors.length > 0) {
+                processedErrors.slice(0, 3).forEach(error => errorDetails.push(error));
+                if (processedErrors.length > 3) {
+                  errorDetails.push(`  - ... and ${processedErrors.length - 3} more errors`);
+                }
+              } else {
+                errorDetails.push(`  - Validation failed (check console for details)`);
+              }
+            } else {
+              errorDetails.push(`  - Validation failed (no specific errors available)`);
+            }
+          });
+
+          if (invalidConversations.length > 3) {
+            errorDetails.push(`\n... and ${invalidConversations.length - 3} more conversations with errors`);
+          }
+
+          errorDetails.push("\n🐛 Unexpected error?");
+          errorDetails.push("If this file was downloaded directly from Claude's export feature:");
+          errorDetails.push("1. Check existing issues: https://github.com/osteele/claude-chat-viewer/issues");
+          errorDetails.push("2. Report new issue: https://github.com/osteele/claude-chat-viewer/issues/new");
+
+          warningMsg = errorDetails.join('\n');
+          console.log('Warning message being sent:', warningMsg);
+        }
+        onConversationList(validConversations, warningMsg);
         setError(null);
         setOptions([]);
         return;
       } else if (validConversations.length === 1) {
-        // Single valid conversation - show it directly
-        if (!skipCaching && jsonText.length <= MAX_CACHE_SIZE) {
-          localStorage.setItem(STORAGE_KEY, jsonText);
+        // Single valid conversation - check if we should show it directly or in browser
+        if (invalidConversations.length > 0) {
+          // If there were other invalid conversations, show in browser with warning
+          const errorDetails: string[] = [];
+          errorDetails.push(`❌ Partially loaded: 1 of ${data.length} conversations was valid.\n`);
+          errorDetails.push(`${invalidConversations.length} conversation(s) had validation errors:\n`);
+
+          invalidConversations.slice(0, 3).forEach((item: any) => {
+            const convName = item.conversation?.name || `Conversation ${item.index + 1}`;
+            errorDetails.push(`\n• ${convName}:`);
+
+            // Get the actual validation errors
+            if (item.result && item.result.error && item.result.error.errors) {
+              const errors = item.result.error.errors;
+
+              // Process union errors to get actual validation details
+              const processedErrors: string[] = [];
+              errors.forEach((err: any) => {
+                if (err.code === "invalid_union" && err.unionErrors) {
+                  // Extract errors from union attempts
+                  err.unionErrors.forEach((unionError: any) => {
+                    if (unionError.errors && unionError.errors.length > 0) {
+                      unionError.errors.slice(0, 2).forEach((e: any) => {
+                        const path = e.path.join('.');
+                        if (path && e.message !== "Invalid input") {
+                          processedErrors.push(`  - At "${path}": ${e.message}`);
+                        }
+                      });
+                    }
+                  });
+                } else {
+                  const path = err.path.join('.');
+                  const message = err.message === "Invalid input" ? "Invalid data format" : err.message;
+                  if (path) {
+                    processedErrors.push(`  - At "${path}": ${message}`);
+                  } else {
+                    processedErrors.push(`  - ${message}`);
+                  }
+                }
+              });
+
+              // Add the first few processed errors
+              if (processedErrors.length > 0) {
+                processedErrors.slice(0, 3).forEach(error => errorDetails.push(error));
+                if (processedErrors.length > 3) {
+                  errorDetails.push(`  - ... and ${processedErrors.length - 3} more errors`);
+                }
+              } else {
+                errorDetails.push(`  - Validation failed (check console for details)`);
+              }
+            } else {
+              errorDetails.push(`  - Validation failed (no specific errors available)`);
+            }
+          });
+
+          errorDetails.push("\n🐛 Unexpected error?");
+          errorDetails.push("If this file was downloaded directly from Claude's export feature:");
+          errorDetails.push("1. Check existing issues: https://github.com/osteele/claude-chat-viewer/issues");
+          errorDetails.push("2. Report new issue: https://github.com/osteele/claude-chat-viewer/issues/new");
+
+          const warningMsg = errorDetails.join('\n');
+          onConversationList(validConversations, warningMsg);
+        } else {
+          // Only one conversation and it's valid - show it directly
+          if (!skipCaching && jsonText.length <= MAX_CACHE_SIZE) {
+            localStorage.setItem(STORAGE_KEY, jsonText);
+          }
+          onValidJson(validConversations[0]);
         }
-        onValidJson(validConversations[0]);
         setError(null);
         setOptions([]);
         return;
       }
 
       // If we get here, no valid conversations were found
-      setError("No valid conversations found in the JSON array.");
+      const errorDetails: string[] = [];
+      errorDetails.push(`❌ No valid conversations found in the file (0 of ${data.length} conversations could be loaded)\n`);
+
+      // Show details of first few invalid conversations
+      invalidConversations.slice(0, 3).forEach((item: any) => {
+        const convName = item.conversation?.name || `Conversation ${item.index + 1}`;
+        errorDetails.push(`\n📄 ${convName}:`);
+
+        const firstErrors = item.result.error.errors.slice(0, 2);
+        firstErrors.forEach((err: any) => {
+          const path = err.path.join('.');
+          if (path) {
+            errorDetails.push(`  • At "${path}": ${err.message}`);
+          } else {
+            errorDetails.push(`  • ${err.message}`);
+          }
+        });
+
+        if (item.result.error.errors.length > 2) {
+          errorDetails.push(`  • ... and ${item.result.error.errors.length - 2} more errors`);
+        }
+      });
+
+      if (invalidConversations.length > 3) {
+        errorDetails.push(`\n... and ${invalidConversations.length - 3} more conversations with errors`);
+      }
+
+      errorDetails.push("\n💡 This might be:");
+      errorDetails.push("• A corrupted export file");
+      errorDetails.push("• An incompatible format from an older Claude version");
+      errorDetails.push("• A modified or incomplete JSON file");
+
+      setError(errorDetails.join('\n'));
       return;
     }
 
@@ -148,24 +353,159 @@ export const JsonInput: React.FC<JsonInputProps> = ({
       setError(null);
       setOptions([]);
     } else {
-      const errors = result.error.errors
-        .filter((err: any) => err.path.length > 0) // Filter out root-level errors with empty paths
-        .map((err: any) => ({
-          path: err.path.join("."),
-          message: err.message,
-        }));
+      // For better error messages, let's check which schema failed
+      // The union will have tried both schemas, so we can be more specific
+      const hasRequiredFields = data.uuid && data.chat_messages && data.created_at;
 
-      // If we have specific field errors, show them. Otherwise show a generic message
-      if (errors.length > 0) {
-        setError(formatValidationErrors(JSON.stringify(data, null, 2), errors));
-      } else {
-        // Check if it's the expected chat format
-        if (!data.chat_messages && !data.messages) {
-          setError("This doesn't appear to be a Claude conversation. Expected 'chat_messages' or 'messages' field.");
+      // Log validation errors to console in a readable format
+      console.error('Conversation validation failed:');
+
+      // Extract and log the most relevant errors
+      const relevantErrors: string[] = [];
+      result.error.errors.forEach((err: any) => {
+        if (err.code === "invalid_union" && err.unionErrors) {
+          err.unionErrors.forEach((unionError: any) => {
+            if (unionError.errors && unionError.errors.length > 0) {
+              unionError.errors.slice(0, 5).forEach((e: any) => {
+                const path = e.path.join('.');
+                const message = e.message || "Required field missing";
+                if (path) {
+                  relevantErrors.push(`  - ${path}: ${message}`);
+                } else {
+                  relevantErrors.push(`  - ${message}`);
+                }
+              });
+            }
+          });
         } else {
-          setError("Invalid conversation format. Please check that this is a Claude export.");
+          const path = err.path.join('.');
+          const message = err.message || "Validation error";
+          if (path) {
+            relevantErrors.push(`  - ${path}: ${message}`);
+          } else {
+            relevantErrors.push(`  - ${message}`);
+          }
         }
+      });
+
+      if (relevantErrors.length > 0) {
+        console.error('Validation errors:\n' + relevantErrors.slice(0, 10).join('\n'));
+        if (relevantErrors.length > 10) {
+          console.error(`  ... and ${relevantErrors.length - 10} more errors`);
+        }
+      } else {
+        console.error('  File structure doesn\'t match expected Claude conversation format');
       }
+
+      // Create a more user-friendly error message
+      const allErrors = result.error.errors;
+      const errorSummary: string[] = [];
+
+      // Group errors by message path for better readability
+      const errorsByPath = new Map<string, string[]>();
+
+      // For union errors, Zod nests the actual errors inside
+      const processError = (err: any) => {
+        const path = err.path.join('.');
+        let message = err.message;
+
+        // Handle union errors specially - they contain the actual validation errors
+        if (err.code === "invalid_union" && err.unionErrors) {
+          // Extract the most relevant errors from the union attempts
+          const relevantErrors: string[] = [];
+          err.unionErrors.forEach((unionError: any) => {
+            if (unionError.errors && unionError.errors.length > 0) {
+              // Get the first few meaningful errors from each schema attempt
+              unionError.errors.slice(0, 3).forEach((e: any) => {
+                const subPath = e.path.join('.');
+                if (subPath && e.message !== "Invalid input") {
+                  relevantErrors.push(`${subPath}: ${e.message}`);
+                }
+              });
+            }
+          });
+
+          if (relevantErrors.length > 0) {
+            // Skip adding this union error and process the nested errors instead
+            relevantErrors.forEach(error => {
+              const [errPath, errMsg] = error.split(': ');
+              if (!errorsByPath.has(errPath)) {
+                errorsByPath.set(errPath, []);
+              }
+              errorsByPath.get(errPath)!.push(errMsg);
+            });
+            return; // Don't add the union error itself
+          }
+          // If no relevant errors were extracted, show the raw union errors
+          if (err.unionErrors && err.unionErrors.length > 0) {
+            err.unionErrors.forEach((unionError: any) => {
+              if (unionError.errors && unionError.errors.length > 0) {
+                unionError.errors.slice(0, 5).forEach((e: any) => {
+                  const subPath = e.path.join('.');
+                  const subMessage = e.message || "Required field missing";
+                  if (!errorsByPath.has(subPath)) {
+                    errorsByPath.set(subPath, []);
+                  }
+                  errorsByPath.get(subPath)!.push(subMessage);
+                });
+              }
+            });
+            return;
+          }
+          message = "Data doesn't match expected conversation format";
+        } else if (message === "Invalid input") {
+          if (err.code === "invalid_type") {
+            message = `Expected ${err.expected}, got ${err.received}`;
+          } else {
+            message = "Invalid data format";
+          }
+        }
+
+        if (!errorsByPath.has(path)) {
+          errorsByPath.set(path, []);
+        }
+        errorsByPath.get(path)!.push(message);
+      };
+
+      allErrors.forEach(processError);
+
+      // Build user-friendly error message
+      errorSummary.push("❌ This file cannot be loaded due to validation errors:\n");
+
+      let errorCount = 0;
+      errorsByPath.forEach((messages, path) => {
+        errorCount++;
+        if (errorCount <= 10) { // Show first 10 errors for more detail
+          if (path) {
+            errorSummary.push(`• At "${path}": ${messages.join(', ')}`);
+          } else {
+            errorSummary.push(`• ${messages.join(', ')}`);
+          }
+        }
+      });
+
+      if (errorCount > 10) {
+        errorSummary.push(`\n... and ${errorCount - 10} more errors`);
+      } else if (errorCount === 0) {
+        // If no specific errors were extracted, show a generic message
+        errorSummary.push(`• The file structure doesn't match any expected Claude conversation format`);
+        errorSummary.push(`• Missing required fields: uuid, name, created_at, updated_at, chat_messages`);
+      }
+
+      // Add helpful context
+      errorSummary.push("\n💡 Common issues:");
+      errorSummary.push("• Ensure this is a Claude conversation export");
+      errorSummary.push("• Check that the JSON structure hasn't been modified");
+      errorSummary.push("• Verify all required fields are present");
+
+      errorSummary.push("\n🐛 Unexpected error?");
+      errorSummary.push("If this file was downloaded directly from Claude's export feature and hasn't been modified:");
+      errorSummary.push("1. Check if this issue has been reported: https://github.com/osteele/claude-chat-viewer/issues");
+      errorSummary.push("2. If not, please report it: https://github.com/osteele/claude-chat-viewer/issues/new");
+      errorSummary.push("   Include the error details above when reporting.");
+
+      const errorMessage = errorSummary.join('\n');
+      setError(errorMessage);
     }
   };
 
@@ -239,7 +579,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({
       return;
     }
 
-    // Handle JSON files (existing code)
+    // Handle JSON files
     const reader = new FileReader();
     reader.onload = (e) => {
       const content = e.target?.result as string;
@@ -250,6 +590,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({
           // Skip caching for uploaded files to avoid storage issues with large files
           processJsonData(parsedData, true);
         } catch (err) {
+          console.error('JSON parse error:', err);
           if (err instanceof Error) {
             setError(`Invalid JSON file: ${err.message}`);
           } else {
@@ -257,6 +598,10 @@ export const JsonInput: React.FC<JsonInputProps> = ({
           }
         }
       }
+    };
+    reader.onerror = (e) => {
+      console.error('FileReader error:', e);
+      setError("Failed to read file");
     };
     reader.readAsText(file);
   };
@@ -543,6 +888,56 @@ export const JsonInput: React.FC<JsonInputProps> = ({
           </div>
         </TabsContent>
       </Tabs>
+
+      {error && (
+        <Alert variant="destructive" className="mt-4 relative">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="whitespace-pre-wrap font-mono text-sm">
+            {error.split('\n').map((line, index) => {
+              // Make GitHub URLs clickable
+              if (line.includes('https://github.com/')) {
+                const urlMatch = line.match(/(.*?)(https:\/\/github\.com\/[^\s]+)(.*)/);
+                if (urlMatch) {
+                  return (
+                    <span key={index}>
+                      {urlMatch[1]}
+                      <a
+                        href={urlMatch[2]}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 underline"
+                      >
+                        {urlMatch[2]}
+                      </a>
+                      {urlMatch[3]}
+                      {'\n'}
+                    </span>
+                  );
+                }
+              }
+              return <span key={index}>{line}{'\n'}</span>;
+            })}
+          </AlertDescription>
+          <button
+            onClick={(e) => {
+              navigator.clipboard.writeText(error);
+              // Show a brief confirmation
+              const btn = e.currentTarget;
+              const originalText = btn.textContent;
+              btn.textContent = "Copied!";
+              btn.classList.add("text-green-600");
+              setTimeout(() => {
+                btn.textContent = originalText;
+                btn.classList.remove("text-green-600");
+              }, 2000);
+            }}
+            className="absolute top-2 right-2 px-2 py-1 text-xs bg-white hover:bg-gray-50 border border-gray-300 rounded transition-colors"
+            title="Copy error message to clipboard"
+          >
+            Copy Error
+          </button>
+        </Alert>
+      )}
       </div>
 
       <div className="mt-6 space-y-3 text-xs text-gray-500">
@@ -610,15 +1005,6 @@ export const JsonInput: React.FC<JsonInputProps> = ({
         onChange={handleFileUpload}
         className="hidden"
       />
-
-      {error && (
-        <Alert variant="destructive" className="mt-6">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="whitespace-pre-wrap font-mono text-sm">
-            {error}
-          </AlertDescription>
-        </Alert>
-      )}
 
       {options.length > 0 && (
         <div className="mt-6 p-6 bg-white border border-gray-200 rounded-lg shadow-sm">

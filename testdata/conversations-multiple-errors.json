@@ -1,0 +1,96 @@
+[
+  {
+    "uuid": "conv-1",
+    "name": "Valid Conversation",
+    "created_at": "2024-01-15T10:00:00Z",
+    "updated_at": "2024-01-15T10:00:00Z",
+    "account": {
+      "uuid": "account-123"
+    },
+    "chat_messages": [
+      {
+        "uuid": "msg-1-1",
+        "text": "Hello, this is a valid message",
+        "content": [
+          {
+            "type": "text",
+            "text": "Hello, this is a valid message"
+          }
+        ],
+        "sender": "human",
+        "created_at": "2024-01-15T10:00:00Z",
+        "updated_at": "2024-01-15T10:00:00Z"
+      }
+    ]
+  },
+  {
+    "uuid": "conv-2",
+    "name": "Missing chat_messages",
+    "created_at": "2024-01-15T10:00:00Z",
+    "updated_at": "2024-01-15T10:00:00Z",
+    "account": {
+      "uuid": "account-123"
+    }
+  },
+  {
+    "uuid": "conv-3",
+    "name": "Empty chat_messages",
+    "created_at": "2024-01-15T10:00:00Z",
+    "updated_at": "2024-01-15T10:00:00Z",
+    "account": {
+      "uuid": "account-123"
+    },
+    "chat_messages": []
+  },
+  {
+    "uuid": "conv-4",
+    "name": "Malformed messages",
+    "created_at": "2024-01-15T10:00:00Z",
+    "updated_at": "2024-01-15T10:00:00Z",
+    "account": {
+      "uuid": "account-123"
+    },
+    "chat_messages": [
+      {
+        "uuid": "msg-4-1",
+        "text": "Message with invalid content",
+        "content": "This should be an array",
+        "sender": "human",
+        "created_at": "2024-01-15T10:00:00Z",
+        "updated_at": "2024-01-15T10:00:00Z"
+      }
+    ]
+  },
+  {
+    "uuid": "conv-5",
+    "name": "Mixed valid and invalid messages",
+    "created_at": "2024-01-15T10:00:00Z",
+    "updated_at": "2024-01-15T10:00:00Z",
+    "account": {
+      "uuid": "account-123"
+    },
+    "chat_messages": [
+      {
+        "uuid": "msg-5-1",
+        "text": "Valid message",
+        "content": [
+          {
+            "type": "text",
+            "text": "This is valid"
+          }
+        ],
+        "sender": "human",
+        "created_at": "2024-01-15T10:00:00Z",
+        "updated_at": "2024-01-15T10:00:00Z"
+      },
+      {
+        "uuid": "msg-5-2",
+        "text": "Invalid message",
+        "content": null,
+        "sender": "assistant",
+        "created_at": "2024-01-15T10:01:00Z",
+        "updated_at": "2024-01-15T10:01:00Z"
+      }
+    ]
+  }
+]

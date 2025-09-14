@@ -91,13 +91,16 @@ const FileSchema = z.object({
 });
 
 const ChatMessageSchema = z.object({
-  uuid: z.string(),
-  index: z.number(),
-  sender: z.enum(["human", "assistant"]),
-  content: z.array(ContentItemSchema),
-  text: z.string(),
-  created_at: z.string(),
-  updated_at: z.string(),
+  uuid: z.string().describe("Message unique identifier"),
+  index: z.number().describe("Message index in conversation"),
+  sender: z.enum(["human", "assistant"]).describe("Message sender"),
+  content: z.array(ContentItemSchema, {
+    required_error: "Message content is required",
+    invalid_type_error: "Message content must be an array"
+  }).describe("Message content items"),
+  text: z.string().describe("Message text"),
+  created_at: z.string().describe("Creation timestamp"),
+  updated_at: z.string().describe("Update timestamp"),
   truncated: z.boolean().default(false),
   attachments: z.array(AttachmentSchema).optional(),
   files: z.array(FileSchema).optional(),
@@ -131,15 +134,18 @@ const SettingsSchema = z.object({
 
 // Schema for individual conversation exports
 const IndividualChatSchema = z.object({
-  uuid: z.string(),
-  name: z.string(),
-  summary: z.string(),
-  created_at: z.string(),
-  updated_at: z.string(),
+  uuid: z.string({ required_error: "Conversation UUID is required" }),
+  name: z.string({ required_error: "Conversation name is required" }),
+  summary: z.string({ required_error: "Conversation summary is required" }),
+  created_at: z.string({ required_error: "Creation date is required" }),
+  updated_at: z.string({ required_error: "Update date is required" }),
   settings: SettingsSchema,
   is_starred: z.boolean().default(false),
-  current_leaf_message_uuid: z.string(),
-  chat_messages: z.array(ChatMessageSchema),
+  current_leaf_message_uuid: z.string({ required_error: "Current message UUID is required" }),
+  chat_messages: z.array(ChatMessageSchema, {
+    required_error: "chat_messages array is required",
+    invalid_type_error: "chat_messages must be an array of messages"
+  }),
   conversation_id: z.string().optional(),
   model: z.string().optional(),
   project_uuid: z.string().optional(),
@@ -153,9 +159,9 @@ const ConversationItemSchema = z.object({
   name: z.string(),
   created_at: z.string(),
   updated_at: z.string(),
-  account: z.object({ 
-    uuid: z.string() 
-  }).passthrough(),
+  account: z.object({
+    uuid: z.string()
+  }).passthrough().optional(), // Made optional as sample data doesn't have this
   chat_messages: z.array(ConversationMessageSchema),
   // Optional fields that may or may not be present
   summary: z.string().optional(),

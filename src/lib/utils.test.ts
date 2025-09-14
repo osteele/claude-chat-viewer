@@ -145,8 +145,8 @@ describe("chatToHtml", () => {
     const result = chatToHtml(chat);
     expect(result).toContain("<strong>Human:</strong>");
     expect(result).toContain("<em>fine</em>");
-    expect(result).toContain('<pre style="font-family: monospace;');
-    expect(result).toContain("<code>print('hi')</code>");
+    expect(result).toContain('<pre class="language-python">');
+    expect(result).toContain('<code class="language-python">');
   });
 });
 
