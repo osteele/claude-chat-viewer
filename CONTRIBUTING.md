@@ -90,6 +90,10 @@ claude-chat-viewer/
 - ReactMarkdown - Markdown rendering
 - Lucide React - Icon library
 
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for planned features and improvements. Also check [Ideas](docs/ideas.md) for other feature ideas.
+
 ## Development Guidelines
 
 ### Code Style

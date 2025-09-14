@@ -148,14 +148,20 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
 
 Check out my [other web applications](https://osteele.com/software/web-apps/) and [AI & LLM tools](https://osteele.com/topics/ai).
 
+### Related Projects
+
+- [Convert Claude JSON to
+Markdown](https://observablehq.com/@simonw/convert-claude-json-to-markdown) - Observable script to convert Claude JSON to markdown
+- [Claude Artifact Unpacker](https://github.com/osteele/claude-artifact-unpacker) - Extract and save Claude artifacts as files
+- There's some Chrome extensions with similar functionality. They don't require you to download or export JSON files.
+
+Also see [my other Development Tools](https://github.com/osteele/software/develop-tools) - Collection of development utilities and tools
+
 ## Acknowledgements
 
 Inspired by Simon Willison's [Convert Claude JSON to
 Markdown](https://observablehq.com/@simonw/convert-claude-json-to-markdown)
 tool.
-
-Written with [Claude](https://www.anthropic.com/claude) 🤖 and
-[Cursor](https://www.cursor.com) ✨
 
 Thanks to [@adamnemecek](https://github.com/adamnemecek) for the UI improvement suggestion (#1).
 
