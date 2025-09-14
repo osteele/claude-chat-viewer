@@ -8,6 +8,10 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit --skipLibCheck",
+    "format": "biome format --write .",
+    "lint": "biome lint .",
+    "fix": "biome check --write .",
+    "check": "biome check . && tsc --noEmit --skipLibCheck",
     "prepare": "husky install",
     "test": "bun test"
   },
@@ -39,6 +43,7 @@
     "zod-validation-error": "^3.4.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.2.4",
     "@mdx-js/rollup": "^3.1.0",
     "@types/bun": "^1.1.13",
     "@types/file-saver": "^2.0.7",
