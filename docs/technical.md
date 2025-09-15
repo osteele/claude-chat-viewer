@@ -47,11 +47,10 @@ C -->|Artifact| F[Artifact Renderer]
 C -->|Thinking| G[Thinking Block]
 ```
 
-
 ## Data Flow
 
 1. User inputs Claude JSON
-2. JSON is validated against ChatData schema
+2. JSON is validated against ChatData schema (see [schemas.md](./schemas.md))
 3. Messages are parsed into segments
 4. Each segment is rendered according to its type:
    - Text: Rendered as Markdown
@@ -96,6 +95,7 @@ The `parseMessage` function splits messages into segments:
 - ReactMarkdown for markdown rendering
 - Tailwind CSS for styling
 - Tabs from shadcn/ui
+- Zod for schema validation
 
 ## Limitations
 
@@ -112,25 +112,13 @@ The `parseMessage` function splits messages into segments:
 - Enhance print layout options
 - Add message search functionality
 - Implement conversation export options
+- Support advanced schema features (projects, workspaces, message threading)
 
-## Development Guidelines
+## Data Schema
 
-### Adding New Message Types
-1. Update the ChatData schema
-2. Add parsing logic in messageParser
-3. Create a new renderer component
-4. Add styling support
-5. Update MessageCard to handle new type
+The application validates conversation data using Zod schemas. For detailed schema documentation, see [schemas.md](./schemas.md).
 
-### Styling Conventions
-- Use Tailwind classes
-- Follow existing color scheme
-- Maintain consistent spacing
-- Ensure print compatibility
-- Support dark mode (future)
-
-### Component Structure
-- Keep components focused and single-purpose
-- Use TypeScript interfaces for props
-- Implement error boundaries
-- Support accessibility features
+### Input File Compatibility
+- Individual conversation exports (e.g., `inputs/gosper-chat.json`)
+- Bulk conversation exports (e.g., `inputs/data/conversations.json`)
+- Both formats are automatically detected and handled
