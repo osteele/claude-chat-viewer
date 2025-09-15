@@ -28,16 +28,17 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking, artifa
       return <div className="p-4 text-red-600">Error: Invalid message content format</div>;
     }
     return content.map((item, index) => {
-      if (item.type === "tool_use") {
-        const key = `${message.uuid}-tool-${item.input.id}`;
+      if (item.type === "tool_use" && item.name === "artifacts") {
+        const id = item.input.id || item.input.identifier || `${Date.now()}`;
+        const key = `${message.uuid}-tool-${id}`;
         const artifactNum = artifactNumberMap.get(key) || 0;
         return (
           <div key={index} className="ml-4 inline-block">
             <Artifact
-              title={item.input.title}
-              content={item.input.content}
-              identifier={item.input.id}
-              artifactType={item.input.type}
+              title={item.input.title || "Untitled"}
+              content={item.input.content || ""}
+              identifier={item.input.id || ""}
+              artifactType={item.input.type || "text"}
               artifactNumber={artifactNum}
             />
           </div>
@@ -424,13 +425,14 @@ const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
 
   data.chat_messages.forEach((message) => {
     message.content.forEach((item) => {
-      if (item.type === "tool_use") {
-        const key = `${message.uuid}-tool-${item.input.id}`;
+      if (item.type === "tool_use" && item.name === "artifacts") {
+        const id = item.input.id || item.input.identifier || `${Date.now()}`;
+        const key = `${message.uuid}-tool-${id}`;
         if (!artifactNumberMap.has(key)) {
           artifacts.push({
-            title: item.input.title,
-            content: item.input.content,
-            type: item.input.type,
+            title: item.input.title || "Untitled",
+            content: item.input.content || "",
+            type: item.input.type || "text",
             language: item.input.language,
             key,
           });
@@ -517,11 +519,11 @@ const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
     // Collect all tool_use artifacts
     data.chat_messages.forEach((message, messageIndex) => {
       message.content.forEach((item, itemIndex) => {
-        if (item.type === "tool_use") {
+        if (item.type === "tool_use" && item.name === "artifacts") {
           artifactCount++;
           const fileInfo = getFileInfo(
-            item.input.content,
-            item.input.type,
+            item.input.content || "",
+            item.input.type || "text",
             item.input.language,
             item.input.title,
           );
@@ -540,7 +542,7 @@ const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
           }
 
           // Create folders if the path includes directories
-          zip.file(fileName, fileInfo.content || item.input.content);
+          zip.file(fileName, fileInfo.content || item.input.content || "");
         }
       });
     });
@@ -556,7 +558,7 @@ const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
 
   // Find if there are any tool_use artifacts with content
   const hasArtifacts = data.chat_messages.some((message) =>
-    message.content.some((item) => item.type === "tool_use" && item.input.content?.trim()),
+    message.content.some((item) => item.type === "tool_use" && item.name === "artifacts" && item.input?.content?.trim()),
   );
 
   return (

@@ -48,14 +48,20 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
   const validateJson = useCallback((text: string) => {
     if (!text.trim()) {
       setIsValidJson(false);
-      setError(null);
+      // Only clear error if it's a syntax error
+      if (error?.startsWith("Syntax error") || error?.includes("JSON appears incomplete")) {
+        setError(null);
+      }
       return;
     }
 
     try {
       JSON.parse(text);
       setIsValidJson(true);
-      setError(null);
+      // Only clear error if it's a syntax error
+      if (error?.startsWith("Syntax error") || error?.includes("JSON appears incomplete")) {
+        setError(null);
+      }
     } catch (err) {
       setIsValidJson(false);
       // Only show error for non-empty input after user stops typing
@@ -68,7 +74,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
         }
       }
     }
-  }, []);
+  }, [error]);
 
   useEffect(() => {
     // Clear previous timeout
@@ -107,7 +113,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
       const validationResults = (data as unknown[]).map((conversation: unknown, index: number) => {
         const result = ChatDataSchema.safeParse(conversation);
         if (!result.success) {
-          const convName = conversation?.name || `Conversation ${index + 1}`;
+          const convName = (conversation as any)?.name || `Conversation ${index + 1}`;
           console.error(`Validation failed for ${convName}:`);
 
           // Log errors in readable format

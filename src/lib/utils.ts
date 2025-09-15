@@ -48,7 +48,8 @@ export function chatToHtml(data: ChatData): string {
             type: string;
             text?: string;
             language?: string;
-            input?: { title: string; content: string; language?: string };
+            name?: string;
+            input?: { title?: string; content?: string; language?: string };
           }) => {
             if (item.type === "text") {
               return (
@@ -88,9 +89,10 @@ export function chatToHtml(data: ChatData): string {
                   .replace(/\n/g, "<br>")
               );
             }
-            if (item.type === "tool_use" && item.input) {
+            if (item.type === "tool_use" && item.name === "artifacts" && item.input) {
               const language = item.input.language || "text";
               const content = item.input.content || "";
+              const title = item.input.title || "Untitled";
               let highlightedCode: string;
               try {
                 const grammar =
@@ -107,7 +109,7 @@ export function chatToHtml(data: ChatData): string {
                   .replace(/</g, "&lt;")
                   .replace(/>/g, "&gt;");
               }
-              return `<div><strong>${item.input.title}</strong><pre class="language-${language}"><code class="language-${language}">${highlightedCode}</code></pre></div>`;
+              return `<div><strong>${title}</strong><pre class="language-${language}"><code class="language-${language}">${highlightedCode}</code></pre></div>`;
             }
             return "";
           },

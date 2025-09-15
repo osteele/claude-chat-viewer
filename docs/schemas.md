@@ -7,6 +7,33 @@ The application uses Zod schemas defined in `src/schemas/chat.ts` to validate an
 1. **Individual conversation exports** (`IndividualChatSchema`) - Single conversation files
 2. **Bulk conversation exports** (`ConversationItemSchema`) - Arrays of conversations
 
+## Schema Sources and Validation Status
+
+The schema elements come from different sources of conversation data:
+
+### Elements from Real Claude Exports
+These elements are present in actual exported conversation files from Claude:
+- **Core conversation structure** - uuid, name, created_at, updated_at, chat_messages
+- **Message structure** - uuid, text, content, sender, created_at, updated_at
+- **Content types** - text, thinking, tool_use, tool_result, voice_note
+- **Artifacts** - tool_use with name="artifacts" and associated input fields
+- **Attachments/Files** - Present in some bulk exports
+- **Account field** - Present in bulk exports but not individual exports
+
+### Elements Only in Sample Data
+These elements appear only in the sample conversations (`src/data/sampleConversations/`) and NOT in real Claude exports:
+- **`SettingsSchema`** - Feature flags like `preview_feature_uses_artifacts`, `preview_feature_uses_latex`
+- **`ThumbnailAssetSchema` and `PreviewAssetSchema`** - Rich media preview metadata
+- **`files_v2` field** - Alternative file attachment format
+
+### Recent Additions for Export Compatibility
+The schema was recently updated to support all real export formats:
+- **`thinking` content type** - Added for conversations with Claude's thinking process
+- **`voice_note` content type** - Added for voice transcription notes
+- **`source` and `md_citations` fields** - Added to tool_use input for web search artifacts
+- **`language` field nullable** - Changed from optional string to nullable to handle null values
+- **`index` field default** - Made optional with default 0 for messages missing this field
+
 ## Core Schema Structure
 
 ### ChatDataSchema
@@ -17,18 +44,26 @@ ChatDataSchema = z.union([IndividualChatSchema, ConversationItemSchema])
 
 ### Message Content Types
 
-The schema recognizes three content types validated through a discriminated union:
+The schema recognizes five content types validated through a discriminated union:
 
 1. **text** - Regular text/markdown content
    - Contains: `text` field with string content
 
-2. **tool_use** - Tool interactions (including artifacts)
+2. **thinking** - Claude's internal reasoning process
+   - Contains: `thinking` field with reasoning text
+   - May contain: `summaries` array and `cut_off` boolean
+
+3. **tool_use** - Tool interactions (including artifacts)
    - Contains: `name` field (e.g., "artifacts")
    - Contains: `input` object with tool-specific data
 
-3. **tool_result** - Tool execution results
+4. **tool_result** - Tool execution results
    - Contains: `content` array with results
    - Contains: `is_error` boolean flag
+
+5. **voice_note** - Voice transcription notes
+   - Contains: `text` field with transcribed content
+   - May contain: `title` field with note title
 
 ## Schema Properties
 
@@ -120,9 +155,9 @@ The schema uses several validation techniques:
 - Tool use/artifact content
 - Timestamped content with citations
 
-### Input File Examples
-- `inputs/gosper-chat.json` - Individual conversation with artifacts
-- `inputs/data/conversations.json` - Bulk export format
+### Supported Export Formats
+- Individual conversation exports - Single conversation files
+- Bulk conversation exports - Arrays of conversations (conversations.json format)
 
 ## Schema Design Philosophy
 
@@ -143,3 +178,5 @@ Current data represents a simpler subset focusing on basic conversation export w
 - The schema is intentionally permissive to handle format variations
 - Use `.passthrough()` to preserve unknown fields for forward compatibility
 - Validation errors should provide clear feedback about which format failed
+- The `SettingsSchema` and rich media assets (thumbnails/previews) are only used in sample data, not real exports
+- Use the CLI tools (`bun validate` and `bun debug`) to test schema changes
