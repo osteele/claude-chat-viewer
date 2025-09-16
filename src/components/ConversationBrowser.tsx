@@ -237,18 +237,11 @@ export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
           </div>
         ) : (
           filteredConversations.map((conversation) => (
-            <div
+            <button
               key={conversation.uuid}
-              className="bg-white border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-sm transition-colors cursor-pointer"
+              type="button"
+              className="text-left bg-white border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-sm transition-colors cursor-pointer"
               onClick={() => handleSelectConversation(conversation)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  handleSelectConversation(conversation);
-                }
-              }}
-              role="button"
-              tabIndex={0}
             >
               <div className="flex justify-between items-start gap-4">
                 <div className="flex-1 min-w-0">
@@ -304,11 +297,11 @@ export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
                     {conversation.chat_messages.length !== 1 ? "s" : ""}
                   </div>
                 </div>
-                <Button variant="outline" size="sm">
-                  View
+                <Button asChild variant="outline" size="sm">
+                  <span>View</span>
                 </Button>
               </div>
-            </div>
+            </button>
           ))
         )}
       </div>

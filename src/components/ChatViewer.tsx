@@ -33,7 +33,7 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking, artifa
         const key = `${message.uuid}-tool-${id}`;
         const artifactNum = artifactNumberMap.get(key) || 0;
         return (
-          <div key={index} className="ml-4 inline-block">
+          <div key={key} className="ml-4 inline-block">
             <Artifact
               title={item.input.title || "Untitled"}
               content={item.input.content || ""}
@@ -50,13 +50,13 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking, artifa
         if (typeof item.text !== "string") {
           console.error("Invalid text content in message:", message.uuid, item);
           return (
-            <div key={index} className="p-4 text-red-600">
+            <div key={`${message.uuid}-invalid-${index}`} className="p-4 text-red-600">
               Error: Invalid text content (expected string, got {typeof item.text})
             </div>
           );
         }
 
-        let segments;
+        let segments: import("../lib/messageParser").Segment[];
         try {
           segments = isHuman
             ? [{ type: "text" as const, content: item.text }]
@@ -68,14 +68,14 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking, artifa
         }
 
         return (
-          <div key={index} className="max-w-none p-4">
-            {segments.map((segment, i) => {
+          <div key={`${message.uuid}-content-${index}`} className="max-w-none p-4">
+            {segments.map((segment, _i) => {
               if (segment.type === "artifact") {
                 const key = `${message.uuid}-artifact-${segment.identifier}`;
                 const artifactNum = artifactNumberMap.get(key) || 0;
                 return (
                   <Artifact
-                    key={i}
+                    key={segment.identifier}
                     title={segment.title}
                     content={segment.content}
                     identifier={segment.identifier}
@@ -89,7 +89,7 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking, artifa
                 if (!showThinking) return null;
                 return (
                   <div
-                    key={i}
+                    key={`${message.uuid}-thinking-${segment.content.slice(0, 24)}`}
                     className="my-4 bg-purple-50 rounded-2xl border border-purple-100 p-4"
                   >
                     <div className="flex items-center gap-2 mb-2">
@@ -106,7 +106,7 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking, artifa
               if (segment.type === "code") {
                 return (
                   <CodeBlock
-                    key={i}
+                    key={`${message.uuid}-code-${segment.language}-${(segment.path || "").slice(0, 24)}-${segment.content.slice(0, 24)}`}
                     code={segment.content}
                     language={segment.language}
                     path={segment.path}
@@ -114,9 +114,9 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking, artifa
                 );
               }
 
-              return segment.content.split("\n").map((line, j) => (
+              return (
                 <ReactMarkdown
-                  key={`${i}-${j}`}
+                  key={`${message.uuid}-md-${index}-${segment.type}-${segment.content.slice(0, 16)}`}
                   className="prose font-serif max-w-none leading-loose"
                   components={{
                     code({ className, children, ...props }) {
@@ -132,9 +132,9 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking, artifa
                     li: ({ children }) => <li className="my-0">{children}</li>,
                   }}
                 >
-                  {line}
+                  {segment.content}
                 </ReactMarkdown>
-              ));
+              );
             })}
           </div>
         );
@@ -149,7 +149,7 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking, artifa
         <div className="mb-4 flex flex-wrap gap-2">
           {message.files.map((file, i) => (
             <div
-              key={i}
+              key={file.file_uuid || `${file.file_name}-${file.created_at}`}
               className="inline-flex items-center px-3 py-2 bg-[#f5f4ef] border border-[#e8e7df] rounded-lg"
             >
               <a
@@ -169,11 +169,11 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking, artifa
 
       {message.attachments && message.attachments.length > 0 && (
         <div className="mb-4 flex flex-wrap gap-2">
-          {message.attachments.map((attachment, i) => {
+          {message.attachments.map((attachment) => {
             const [baseName, extension] = attachment.file_name.split(/\.(?=[^.]+$)/);
             return (
               <div
-                key={i}
+                key={`${attachment.file_name}-${attachment.created_at}`}
                 className="px-3 py-8 bg-gradient-to-b from-[#fdfdfb] to-[#e6f5fc] border border-[#e8e7df] rounded-lg"
               >
                 <div className="flex flex-col items-center gap-5">
@@ -433,7 +433,7 @@ const ConversationView: React.FC<{ data: ChatData; onBack?: () => void }> = ({ d
             title: item.input.title || "Untitled",
             content: item.input.content || "",
             type: item.input.type || "text",
-            language: item.input.language,
+            language: item.input.language ?? undefined,
             key,
           });
           artifactNumberMap.set(key, artifacts.length);
@@ -524,7 +524,7 @@ const ConversationView: React.FC<{ data: ChatData; onBack?: () => void }> = ({ d
           const fileInfo = getFileInfo(
             item.input.content || "",
             item.input.type || "text",
-            item.input.language,
+            item.input.language ?? undefined,
             item.input.title,
           );
 
@@ -573,10 +573,12 @@ const ConversationView: React.FC<{ data: ChatData; onBack?: () => void }> = ({ d
           <div className="flex flex-wrap gap-2">
             {onBack && (
               <button
+                type="button"
                 onClick={onBack}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded border border-gray-300 transition-colors"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <title>Back</title>
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -588,6 +590,7 @@ const ConversationView: React.FC<{ data: ChatData; onBack?: () => void }> = ({ d
               </button>
             )}
             <button
+              type="button"
               onClick={() => {
                 window.print();
                 setPrintSuccess(true);
@@ -596,6 +599,7 @@ const ConversationView: React.FC<{ data: ChatData; onBack?: () => void }> = ({ d
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded border border-gray-300 transition-colors"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <title>Print</title>
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -607,10 +611,12 @@ const ConversationView: React.FC<{ data: ChatData; onBack?: () => void }> = ({ d
             </button>
 
             <button
+              type="button"
               onClick={handleCopy}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded border border-gray-300 transition-colors"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <title>Copy</title>
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -622,10 +628,12 @@ const ConversationView: React.FC<{ data: ChatData; onBack?: () => void }> = ({ d
             </button>
 
             <button
+              type="button"
               onClick={handleDownloadMarkdown}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded border border-gray-300 transition-colors"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <title>Download</title>
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -638,6 +646,7 @@ const ConversationView: React.FC<{ data: ChatData; onBack?: () => void }> = ({ d
 
             {hasArtifacts && (
               <button
+                type="button"
                 onClick={() => {
                   handleDownloadArtifacts();
                   setDownloadArtifactsSuccess(true);
@@ -646,6 +655,7 @@ const ConversationView: React.FC<{ data: ChatData; onBack?: () => void }> = ({ d
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded border border-gray-300 transition-colors"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <title>Download Artifacts</title>
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -661,6 +671,7 @@ const ConversationView: React.FC<{ data: ChatData; onBack?: () => void }> = ({ d
           {/* Diagnostic Report */}
           <div className="mb-2">
             <button
+              type="button"
               onClick={() => generateDiagnosticReport()}
               className="text-xs text-blue-600 hover:text-blue-800 underline"
             >
@@ -672,6 +683,7 @@ const ConversationView: React.FC<{ data: ChatData; onBack?: () => void }> = ({ d
                   <h3 className="text-xs font-semibold text-blue-700">Diagnostic Report</h3>
                   <div className="flex gap-2">
                     <button
+                      type="button"
                       onClick={() => {
                         navigator.clipboard.writeText(diagnosticReport);
                       }}
@@ -680,6 +692,7 @@ const ConversationView: React.FC<{ data: ChatData; onBack?: () => void }> = ({ d
                       Copy
                     </button>
                     <button
+                      type="button"
                       onClick={() => setDiagnosticReport(null)}
                       className="text-xs text-gray-500 hover:text-gray-700"
                     >
@@ -703,6 +716,7 @@ const ConversationView: React.FC<{ data: ChatData; onBack?: () => void }> = ({ d
                 stroke="currentColor"
                 viewBox="0 0 24 24"
               >
+                <title>Expand</title>
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -1179,6 +1193,7 @@ const ChatViewer: React.FC = () => {
           <div className="max-w-4xl mx-auto px-6 py-1.5 flex justify-between items-center">
             <div className="flex items-center gap-1">
               <button
+                type="button"
                 onClick={() => {
                   setActiveTab("json");
                   setChatData(null);
@@ -1198,6 +1213,7 @@ const ChatViewer: React.FC = () => {
               </button>
               {conversationList && (
                 <button
+                  type="button"
                   onClick={() => {
                     if (useMasterDetail) {
                       setActiveTab("master-detail");
@@ -1222,6 +1238,7 @@ const ChatViewer: React.FC = () => {
                 </button>
               )}
               <button
+                type="button"
                 onClick={() => {
                   if (chatData) {
                     setActiveTab("view");
@@ -1249,6 +1266,7 @@ const ChatViewer: React.FC = () => {
               className="text-gray-400 hover:text-gray-600 text-xs opacity-60 hover:opacity-100 transition-opacity flex items-center gap-1.5"
             >
               <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="currentColor">
+                <title>GitHub</title>
                 <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
               </svg>
               <span>osteele/claude-chat-viewer</span>
@@ -1284,13 +1302,13 @@ const ChatViewer: React.FC = () => {
               style={{ minHeight: "auto" }}
             >
               <div className="text-red-700 whitespace-pre-wrap font-mono text-sm overflow-visible">
-                {loadWarning.split("\n").map((line, index) => {
+                {loadWarning.split("\n").map((line, idx) => {
                   // Make GitHub URLs clickable
                   if (line.includes("https://github.com/")) {
                     const urlMatch = line.match(/(.*?)(https:\/\/github\.com\/[^\s]+)(.*)/);
                     if (urlMatch) {
                       return (
-                        <span key={index}>
+                        <span key={`url-${idx}-${urlMatch[2]}`}>
                           {urlMatch[1]}
                           <a
                             href={urlMatch[2]}
@@ -1307,7 +1325,7 @@ const ChatViewer: React.FC = () => {
                     }
                   }
                   return (
-                    <span key={index}>
+                    <span key={`line-${idx}-${line.slice(0, 24)}`}>
                       {line}
                       {"\n"}
                     </span>
@@ -1315,6 +1333,7 @@ const ChatViewer: React.FC = () => {
                 })}
               </div>
               <button
+                type="button"
                 onClick={(e) => {
                   navigator.clipboard.writeText(fullErrorDetails || loadWarning);
                   const btn = e.currentTarget;
@@ -1343,13 +1362,13 @@ const ChatViewer: React.FC = () => {
               {loadWarning && (
                 <div className="p-4 bg-red-50 border-b border-red-200 relative flex-shrink-0">
                   <div className="text-red-700 whitespace-pre-wrap font-mono text-sm overflow-visible">
-                    {loadWarning.split("\n").map((line, index) => {
+                    {loadWarning.split("\n").map((line, idx) => {
                       // Make GitHub URLs clickable
                       if (line.includes("https://github.com/")) {
                         const urlMatch = line.match(/(.*?)(https:\/\/github\.com\/[^\s]+)(.*)/);
                         if (urlMatch) {
                           return (
-                            <span key={index}>
+                            <span key={`url-${idx}-${urlMatch[2]}`}>
                               {urlMatch[1]}
                               <a
                                 href={urlMatch[2]}
@@ -1366,7 +1385,7 @@ const ChatViewer: React.FC = () => {
                         }
                       }
                       return (
-                        <span key={index}>
+                        <span key={`line-${idx}-${line.slice(0, 24)}`}>
                           {line}
                           {"\n"}
                         </span>
@@ -1374,6 +1393,7 @@ const ChatViewer: React.FC = () => {
                     })}
                   </div>
                   <button
+                    type="button"
                     onClick={(e) => {
                       navigator.clipboard.writeText(fullErrorDetails || loadWarning);
                       const btn = e.currentTarget;

@@ -21,17 +21,10 @@ export function Artifact({
   return (
     <>
       <div className="my-4 [print-color-adjust:exact]">
-        <div
-          className="flex rounded-lg border border-[#e8e7df] bg-[#f5f4ef] shadow-md cursor-pointer hover:bg-[#f5f4ee]"
+        <button
+          type="button"
+          className="w-full text-left flex rounded-lg border border-[#e8e7df] bg-[#f5f4ef] shadow-md cursor-pointer hover:bg-[#f5f4ee]"
           onClick={() => setIsOpen(true)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              setIsOpen(true);
-            }
-          }}
-          role="button"
-          tabIndex={0}
         >
           <div className="flex items-center justify-center w-14 border-r bg-[#f0eee5] border-[#e8e7df]">
             <div className="text-sm text-gray-600 font-mono">&lt;/&gt;</div>
@@ -45,7 +38,7 @@ export function Artifact({
               </div>
             )}
           </div>
-        </div>
+        </button>
       </div>
 
       <Sheet open={isOpen} onOpenChange={setIsOpen}>

@@ -1,7 +1,7 @@
 import JSZip from "jszip";
 import { AlertCircle, Archive, CheckCircle, Clipboard, FileJson, Upload } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { z } from "zod";
+import type { ZodInvalidUnionIssue, ZodIssue, z } from "zod";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -116,16 +116,18 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
       const validationResults = (data as unknown[]).map((conversation: unknown, index: number) => {
         const result = ChatDataSchema.safeParse(conversation);
         if (!result.success) {
-          const convName = (conversation as any)?.name || `Conversation ${index + 1}`;
+          const convName =
+            (conversation as { name?: string } | null | undefined)?.name ||
+            `Conversation ${index + 1}`;
           console.error(`Validation failed for ${convName}:`);
 
           // Log errors in readable format
           const errors: string[] = [];
-          result.error.errors.forEach((err: any) => {
-            if (err.code === "invalid_union" && err.unionErrors) {
-              err.unionErrors.forEach((unionError: any) => {
+          (result.error.errors as ZodIssue[]).forEach((err) => {
+            if (err.code === "invalid_union" && (err as ZodInvalidUnionIssue).unionErrors) {
+              (err as ZodInvalidUnionIssue).unionErrors.forEach((unionError) => {
                 if (unionError.errors && unionError.errors.length > 0) {
-                  unionError.errors.slice(0, 3).forEach((e: any) => {
+                  unionError.errors.slice(0, 3).forEach((e) => {
                     const path = e.path.join(".");
                     const message = e.message || "Required field missing";
                     if (path) {
@@ -183,10 +185,10 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
 
               // Process union errors to get actual validation details
               const processedErrors: string[] = [];
-              errors.forEach((err: z.ZodIssue & { unionErrors?: unknown[] }) => {
-                if (err.code === "invalid_union" && err.unionErrors) {
+              (errors as ZodIssue[]).forEach((err) => {
+                if (err.code === "invalid_union" && (err as ZodInvalidUnionIssue).unionErrors) {
                   // Extract errors from union attempts
-                  err.unionErrors.forEach((unionError: { errors?: z.ZodIssue[] }) => {
+                  (err as ZodInvalidUnionIssue).unionErrors.forEach((unionError) => {
                     if (unionError.errors && unionError.errors.length > 0) {
                       unionError.errors.slice(0, 2).forEach((e) => {
                         const path = e.path.join(".");
@@ -210,7 +212,9 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
 
               // Add the first few processed errors
               if (processedErrors.length > 0) {
-                processedErrors.slice(0, 3).forEach((error) => errorDetails.push(error));
+                processedErrors.slice(0, 3).forEach((error) => {
+                  errorDetails.push(error);
+                });
                 if (processedErrors.length > 3) {
                   errorDetails.push(`  - ... and ${processedErrors.length - 3} more errors`);
                 }
@@ -266,10 +270,10 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
 
               // Process union errors to get actual validation details
               const processedErrors: string[] = [];
-              errors.forEach((err: z.ZodIssue & { unionErrors?: unknown[] }) => {
-                if (err.code === "invalid_union" && err.unionErrors) {
+              (errors as ZodIssue[]).forEach((err) => {
+                if (err.code === "invalid_union" && (err as ZodInvalidUnionIssue).unionErrors) {
                   // Extract errors from union attempts
-                  err.unionErrors.forEach((unionError: { errors?: z.ZodIssue[] }) => {
+                  (err as ZodInvalidUnionIssue).unionErrors.forEach((unionError) => {
                     if (unionError.errors && unionError.errors.length > 0) {
                       unionError.errors.slice(0, 2).forEach((e) => {
                         const path = e.path.join(".");
@@ -293,7 +297,9 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
 
               // Add the first few processed errors
               if (processedErrors.length > 0) {
-                processedErrors.slice(0, 3).forEach((error) => errorDetails.push(error));
+                processedErrors.slice(0, 3).forEach((error) => {
+                  errorDetails.push(error);
+                });
                 if (processedErrors.length > 3) {
                   errorDetails.push(`  - ... and ${processedErrors.length - 3} more errors`);
                 }
@@ -386,11 +392,11 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
 
       // Extract and log the most relevant errors
       const relevantErrors: string[] = [];
-      result.error.errors.forEach((err: any) => {
-        if (err.code === "invalid_union" && err.unionErrors) {
-          err.unionErrors.forEach((unionError: any) => {
+      (result.error.errors as ZodIssue[]).forEach((err) => {
+        if (err.code === "invalid_union" && (err as ZodInvalidUnionIssue).unionErrors) {
+          (err as ZodInvalidUnionIssue).unionErrors.forEach((unionError) => {
             if (unionError.errors && unionError.errors.length > 0) {
-              unionError.errors.slice(0, 5).forEach((e: any) => {
+              unionError.errors.slice(0, 5).forEach((e) => {
                 const path = e.path.join(".");
                 const message = e.message || "Required field missing";
                 if (path) {
@@ -437,10 +443,10 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
         if (err.code === "invalid_union" && err.unionErrors) {
           // Extract the most relevant errors from the union attempts
           const relevantErrors: string[] = [];
-          err.unionErrors.forEach((unionError: { errors?: z.ZodIssue[] }) => {
-            if (unionError.errors && unionError.errors.length > 0) {
+          (err as ZodInvalidUnionIssue).unionErrors?.forEach((ue) => {
+            if (ue.errors && ue.errors.length > 0) {
               // Get the first few meaningful errors from each schema attempt
-              unionError.errors.slice(0, 3).forEach((e) => {
+              ue.errors.slice(0, 3).forEach((e) => {
                 const subPath = e.path.join(".");
                 if (subPath && e.message !== "Invalid input") {
                   relevantErrors.push(`${subPath}: ${e.message}`);
@@ -461,10 +467,13 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
             return; // Don't add the union error itself
           }
           // If no relevant errors were extracted, show the raw union errors
-          if (err.unionErrors && err.unionErrors.length > 0) {
-            err.unionErrors.forEach((unionError: any) => {
+          if (
+            (err as ZodInvalidUnionIssue).unionErrors &&
+            (err as ZodInvalidUnionIssue).unionErrors.length > 0
+          ) {
+            (err as ZodInvalidUnionIssue).unionErrors.forEach((unionError) => {
               if (unionError.errors && unionError.errors.length > 0) {
-                unionError.errors.slice(0, 5).forEach((e: any) => {
+                unionError.errors.slice(0, 5).forEach((e) => {
                   const subPath = e.path.join(".");
                   const subMessage = e.message || "Required field missing";
                   if (!errorsByPath.has(subPath)) {
@@ -550,7 +559,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
       return;
     }
 
-    let parsedData;
+    let parsedData: unknown;
     try {
       parsedData = JSON.parse(jsonText);
     } catch (err) {
@@ -805,16 +814,18 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
                   </p>
                 </div>
               </div>
-              <div
+              <section
                 className={`border-2 border-dashed rounded-lg p-8 text-center transition-all ${
                   isDragging
                     ? "border-blue-500 bg-blue-50"
                     : "border-gray-300 hover:border-gray-400"
                 }`}
+                aria-label="Upload area"
                 onDragEnter={handleDragEnter}
                 onDragLeave={handleDragLeave}
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
+                aria-describedby="upload-instructions"
               >
                 {isDragging ? (
                   <div>
@@ -833,7 +844,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
                     <p className="text-xs text-gray-500 mt-3">Accepts .zip and .json files</p>
                   </div>
                 )}
-              </div>
+              </section>
             </div>
           </TabsContent>
 
@@ -961,13 +972,13 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
           <Alert variant="destructive" className="mt-4 relative">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription className="whitespace-pre-wrap font-mono text-sm">
-              {error.split("\n").map((line, index) => {
+              {error.split("\n").map((line, idx) => {
                 // Make GitHub URLs clickable
                 if (line.includes("https://github.com/")) {
                   const urlMatch = line.match(/(.*?)(https:\/\/github\.com\/[^\s]+)(.*)/);
                   if (urlMatch) {
                     return (
-                      <span key={index}>
+                      <span key={`url-${idx}-${urlMatch[2]}`}>
                         {urlMatch[1]}
                         <a
                           href={urlMatch[2]}
@@ -984,7 +995,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
                   }
                 }
                 return (
-                  <span key={index}>
+                  <span key={`line-${idx}-${line.slice(0, 24)}`}>
                     {line}
                     {"\n"}
                   </span>
@@ -992,6 +1003,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
               })}
             </AlertDescription>
             <button
+              type="button"
               onClick={(e) => {
                 navigator.clipboard.writeText(error);
                 // Show a brief confirmation
@@ -1021,6 +1033,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
             stroke="currentColor"
             viewBox="0 0 24 24"
           >
+            <title>Shield</title>
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -1042,6 +1055,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
             stroke="currentColor"
             viewBox="0 0 24 24"
           >
+            <title>Info</title>
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -1062,6 +1076,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
             stroke="currentColor"
             viewBox="0 0 24 24"
           >
+            <title>Link</title>
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -1099,6 +1114,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
             stroke="currentColor"
             viewBox="0 0 24 24"
           >
+            <title>Acknowledgements</title>
             <path
               strokeLinecap="round"
               strokeLinejoin="round"

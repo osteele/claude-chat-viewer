@@ -260,9 +260,10 @@ export const MasterDetailView: React.FC<MasterDetailViewProps> = ({
           ) : (
             <div className="divide-y divide-gray-100">
               {filteredConversations.map((conversation) => (
-                <div
+                <button
                   key={conversation.uuid}
-                  className={`px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors ${
+                  type="button"
+                  className={`text-left w-full px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors ${
                     selectedConversation?.uuid === conversation.uuid
                       ? "bg-blue-50 border-l-2 border-blue-500"
                       : ""
@@ -274,17 +275,6 @@ export const MasterDetailView: React.FC<MasterDetailViewProps> = ({
                       setSidebarCollapsed(true);
                     }
                   }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      onSelectConversation(conversation);
-                      if (window.innerWidth < 768) {
-                        setSidebarCollapsed(true);
-                      }
-                    }
-                  }}
-                  role="button"
-                  tabIndex={0}
                 >
                   <h3 className="font-medium text-sm text-gray-900 truncate">
                     {conversation.name || "Untitled Conversation"}
@@ -330,7 +320,7 @@ export const MasterDetailView: React.FC<MasterDetailViewProps> = ({
                     <span>•</span>
                     <span>{conversation.chat_messages.length} messages</span>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           )}

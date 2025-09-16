@@ -1,6 +1,6 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import type { ChatData, ChatMessage } from "../schemas/chat";
+import type { ChatData, ChatMessage, ContentItem } from "../schemas/chat";
 import { parseMessage } from "./messageParser";
 import Prism from "./prism-languages";
 
@@ -21,7 +21,7 @@ export function chatToText(data: ChatData): string {
     .map((message: ChatMessage) => {
       const sender = message.sender === "human" ? "Human" : "Claude";
       const content = message.content
-        .map((item: { type: string; text?: string }) => {
+        .map((item: ContentItem) => {
           if (item.type === "text") {
             // Handle code blocks before stripping markdown
             const text = (item.text ?? "").replace(/```(\w+)?\n([\s\S]*?)```/g, (_, __, code) =>
@@ -43,77 +43,69 @@ export function chatToHtml(data: ChatData): string {
     .map((message: ChatMessage) => {
       const sender = message.sender === "human" ? "Human" : "Claude";
       const content = message.content
-        .map(
-          (item: {
-            type: string;
-            text?: string;
-            language?: string;
-            name?: string;
-            input?: { title?: string; content?: string; language?: string };
-          }) => {
-            if (item.type === "text") {
-              return (
-                (item.text ?? "")
-                  // Convert code blocks with language
-                  .replace(/```(\w+)?\n([\s\S]*?)```/g, (_, lang, code) => {
-                    const language = lang || "text";
-                    let highlightedCode: string;
-                    try {
-                      const grammar =
-                        Prism.languages[language] ||
-                        Prism.languages.plaintext ||
-                        Prism.languages.text ||
-                        {};
-                      highlightedCode = Prism.highlight(code.trim(), grammar, language);
-                    } catch (error) {
-                      // If highlighting fails, just escape the HTML
-                      console.warn(`Failed to highlight code for language: ${language}`, error);
-                      highlightedCode = code
-                        .trim()
-                        .replace(/&/g, "&amp;")
-                        .replace(/</g, "&lt;")
-                        .replace(/>/g, "&gt;");
-                    }
-                    return `<pre class="language-${language}"><code class="language-${language}">${highlightedCode}</code></pre>`;
-                  })
-                  // Convert inline code
-                  .replace(
-                    /`([^`]+)`/g,
-                    '<code style="font-family: monospace; background-color: #f5f5f5; padding: 0.2em 0.4em; border-radius: 3px;">$1</code>',
-                  )
-                  // Convert bold
-                  .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-                  // Convert italic
-                  .replace(/\*(.*?)\*/g, "<em>$1</em>")
-                  // Convert newlines
-                  .replace(/\n/g, "<br>")
-              );
+        .map((item: ContentItem) => {
+          if (item.type === "text") {
+            return (
+              (item.text ?? "")
+                // Convert code blocks with language
+                .replace(/```(\w+)?\n([\s\S]*?)```/g, (_, lang, code) => {
+                  const language = lang || "text";
+                  let highlightedCode: string;
+                  try {
+                    const grammar =
+                      Prism.languages[language] ||
+                      Prism.languages.plaintext ||
+                      Prism.languages.text ||
+                      {};
+                    highlightedCode = Prism.highlight(code.trim(), grammar, language);
+                  } catch (error) {
+                    // If highlighting fails, just escape the HTML
+                    console.warn(`Failed to highlight code for language: ${language}`, error);
+                    highlightedCode = code
+                      .trim()
+                      .replace(/&/g, "&amp;")
+                      .replace(/</g, "&lt;")
+                      .replace(/>/g, "&gt;");
+                  }
+                  return `<pre class="language-${language}"><code class="language-${language}">${highlightedCode}</code></pre>`;
+                })
+                // Convert inline code
+                .replace(
+                  /`([^`]+)`/g,
+                  '<code style="font-family: monospace; background-color: #f5f5f5; padding: 0.2em 0.4em; border-radius: 3px;">$1</code>',
+                )
+                // Convert bold
+                .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+                // Convert italic
+                .replace(/\*(.*?)\*/g, "<em>$1</em>")
+                // Convert newlines
+                .replace(/\n/g, "<br>")
+            );
+          }
+          if (item.type === "tool_use" && item.name === "artifacts" && item.input) {
+            const language = item.input.language ?? "text";
+            const content = item.input.content ?? "";
+            const title = item.input.title ?? "Untitled";
+            let highlightedCode: string;
+            try {
+              const grammar =
+                Prism.languages[language] ||
+                Prism.languages.plaintext ||
+                Prism.languages.text ||
+                {};
+              highlightedCode = Prism.highlight(content.trim(), grammar, language);
+            } catch (error) {
+              console.warn(`Failed to highlight code for language: ${language}`, error);
+              highlightedCode = content
+                .trim()
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
             }
-            if (item.type === "tool_use" && item.name === "artifacts" && item.input) {
-              const language = item.input.language || "text";
-              const content = item.input.content || "";
-              const title = item.input.title || "Untitled";
-              let highlightedCode: string;
-              try {
-                const grammar =
-                  Prism.languages[language] ||
-                  Prism.languages.plaintext ||
-                  Prism.languages.text ||
-                  {};
-                highlightedCode = Prism.highlight(content.trim(), grammar, language);
-              } catch (error) {
-                console.warn(`Failed to highlight code for language: ${language}`, error);
-                highlightedCode = content
-                  .trim()
-                  .replace(/&/g, "&amp;")
-                  .replace(/</g, "&lt;")
-                  .replace(/>/g, "&gt;");
-              }
-              return `<div><strong>${title}</strong><pre class="language-${language}"><code class="language-${language}">${highlightedCode}</code></pre></div>`;
-            }
-            return "";
-          },
-        )
+            return `<div><strong>${title}</strong><pre class="language-${language}"><code class="language-${language}">${highlightedCode}</code></pre></div>`;
+          }
+          return "";
+        })
         .join("");
       return `<p><strong>${sender}:</strong></p><p>${content}</p>`;
     })

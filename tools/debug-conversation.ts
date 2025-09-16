@@ -22,6 +22,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import type { ChatData, ChatMessage, ContentItem } from "../src/schemas/chat";
 
 // ANSI color codes
 const colors = {
@@ -66,7 +67,7 @@ ${colors.bold}Description:${colors.reset}
   `);
 }
 
-function showConversationsList(data: any[]) {
+function showConversationsList(data: ChatData[]) {
   console.log(
     `${colors.blue}Found ${colors.bold}${data.length}${colors.reset}${colors.blue} conversations:${colors.reset}\n`,
   );
@@ -84,7 +85,7 @@ function showConversationsList(data: any[]) {
   );
 }
 
-function showConversation(conv: any, index: number) {
+function showConversation(conv: ChatData, index: number) {
   console.log(
     `${colors.blue}Conversation [${index}]:${colors.reset} ${colors.bold}${conv.name || "Unnamed"}${colors.reset}\n`,
   );
@@ -97,7 +98,7 @@ function showConversation(conv: any, index: number) {
 
   console.log(`\n${colors.cyan}Messages (${conv.chat_messages?.length || 0}):${colors.reset}`);
 
-  conv.chat_messages?.forEach((msg: any, msgIndex: number) => {
+  conv.chat_messages?.forEach((msg: ChatMessage, msgIndex: number) => {
     const contentCount = msg.content?.length || 0;
     const preview = msg.text?.substring(0, 60)?.replace(/\n/g, " ") || "";
     const sender = msg.sender === "human" ? "👤 Human" : "🤖 Assistant";
@@ -115,7 +116,7 @@ function showConversation(conv: any, index: number) {
   );
 }
 
-function showMessage(msg: any, convIndex: number, msgIndex: number) {
+function showMessage(msg: ChatMessage, convIndex: number, msgIndex: number) {
   const sender = msg.sender === "human" ? "👤 Human" : "🤖 Assistant";
 
   console.log(`${colors.blue}Message [${convIndex}][${msgIndex}]:${colors.reset} ${sender}\n`);
@@ -133,7 +134,7 @@ function showMessage(msg: any, convIndex: number, msgIndex: number) {
 
   console.log(`\n${colors.cyan}Content items (${msg.content?.length || 0}):${colors.reset}`);
 
-  msg.content?.forEach((item: any, itemIndex: number) => {
+  msg.content?.forEach((item: ContentItem, itemIndex: number) => {
     const type = item.type;
     let description = "";
 
@@ -168,7 +169,12 @@ function showMessage(msg: any, convIndex: number, msgIndex: number) {
   );
 }
 
-function showContentItem(item: any, convIndex: number, msgIndex: number, contentIndex: number) {
+function showContentItem(
+  item: ContentItem,
+  convIndex: number,
+  msgIndex: number,
+  contentIndex: number,
+) {
   console.log(
     `${colors.blue}Content Item [${convIndex}][${msgIndex}][${contentIndex}]:${colors.reset}\n`,
   );
@@ -182,7 +188,7 @@ function showContentItem(item: any, convIndex: number, msgIndex: number, content
   // Show specific details based on type
   if (item.type === "thinking" && item.summaries) {
     console.log(`\n${colors.cyan}Summaries (${item.summaries.length}):${colors.reset}`);
-    item.summaries.forEach((s: any, i: number) => {
+    item.summaries.forEach((s: unknown, i: number) => {
       console.log(`  ${i + 1}. ${s.summary || s}`);
     });
   }
@@ -266,12 +272,13 @@ function debugFile(filePath: string, convIndex?: number, msgIndex?: number, cont
 
     const contentItem = msg.content[contentIndex];
     showContentItem(contentItem, convIndex, msgIndex, contentIndex);
-  } catch (error: any) {
-    if (error.message.includes("JSON")) {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message.includes("JSON")) {
       console.error(`${colors.red}Error:${colors.reset} Invalid JSON in file`);
       console.error(`  ${error.message}`);
     } else {
-      console.error(`${colors.red}Error:${colors.reset} ${error.message}`);
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`${colors.red}Error:${colors.reset} ${message}`);
     }
     process.exit(1);
   }
@@ -287,20 +294,20 @@ function main() {
   }
 
   const filePath = path.resolve(args[0]);
-  const convIndex = args[1] ? parseInt(args[1], 10) : undefined;
-  const msgIndex = args[2] ? parseInt(args[2], 10) : undefined;
-  const contentIndex = args[3] ? parseInt(args[3], 10) : undefined;
+  const convIndex = args[1] !== undefined ? Number.parseInt(args[1], 10) : undefined;
+  const msgIndex = args[2] !== undefined ? Number.parseInt(args[2], 10) : undefined;
+  const contentIndex = args[3] !== undefined ? Number.parseInt(args[3], 10) : undefined;
 
   // Validate numeric arguments
-  if (args[1] && Number.isNaN(convIndex!)) {
+  if (args[1] !== undefined && Number.isNaN(Number.parseInt(args[1], 10))) {
     console.error(`${colors.red}Error:${colors.reset} Conversation index must be a number`);
     process.exit(1);
   }
-  if (args[2] && Number.isNaN(msgIndex!)) {
+  if (args[2] !== undefined && Number.isNaN(Number.parseInt(args[2], 10))) {
     console.error(`${colors.red}Error:${colors.reset} Message index must be a number`);
     process.exit(1);
   }
-  if (args[3] && Number.isNaN(contentIndex!)) {
+  if (args[3] !== undefined && Number.isNaN(Number.parseInt(args[3], 10))) {
     console.error(`${colors.red}Error:${colors.reset} Content index must be a number`);
     process.exit(1);
   }

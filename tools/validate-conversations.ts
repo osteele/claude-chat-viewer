@@ -13,6 +13,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import type { ZodInvalidUnionIssue, ZodIssue } from "zod";
 import { ChatDataSchema } from "../src/schemas/chat";
 
 // ANSI color codes
@@ -41,11 +42,13 @@ ${colors.bold}Description:${colors.reset}
   `);
 }
 
-function formatError(error: any): string {
-  if (error.path && error.path.length > 0) {
-    return `  ${colors.gray}Path:${colors.reset} ${error.path.join(".")} - ${error.message}`;
+function formatError(error: ZodIssue | { message: string; path?: (string | number)[] }): string {
+  const path = (error as ZodIssue).path ?? (error as { path?: (string | number)[] }).path;
+  const message = (error as ZodIssue).message ?? (error as { message: string }).message;
+  if (path && path.length > 0) {
+    return `  ${colors.gray}Path:${colors.reset} ${path.join(".")} - ${message}`;
   }
-  return `  ${error.message}`;
+  return `  ${message}`;
 }
 
 function validateFile(filePath: string) {
@@ -69,7 +72,7 @@ function validateFile(filePath: string) {
 
       let validCount = 0;
       let invalidCount = 0;
-      const errors: any[] = [];
+      const errors: { index: number; name: string; errors: ZodIssue[] }[] = [];
 
       data.forEach((conv, index) => {
         const result = ChatDataSchema.safeParse(conv);
@@ -83,8 +86,10 @@ function validateFile(filePath: string) {
           const firstErrors = result.error.errors.slice(0, 3);
 
           // Check for union errors to get more specific information
-          const unionError = result.error.errors.find((e: any) => e.code === "invalid_union");
-          let specificErrors = firstErrors;
+          const unionError = result.error.errors.find(
+            (e): e is ZodInvalidUnionIssue => e.code === "invalid_union",
+          );
+          let specificErrors: ZodIssue[] = firstErrors as ZodIssue[];
 
           if (unionError?.unionErrors && unionError.unionErrors.length > 0) {
             // Get the most relevant error from union attempts
@@ -113,7 +118,7 @@ function validateFile(filePath: string) {
         errors.slice(0, 10).forEach((err) => {
           console.log();
           console.log(`${colors.bold}[${err.index}] ${err.name}${colors.reset}`);
-          err.errors.forEach((e: any) => {
+          err.errors.forEach((e) => {
             console.log(formatError(e));
           });
         });
@@ -161,23 +166,25 @@ function validateFile(filePath: string) {
         console.log(`${colors.yellow}Validation errors:${colors.reset}`);
 
         // Get specific errors
-        const errors = result.error.errors;
-        const unionError = errors.find((e: any) => e.code === "invalid_union");
+        const errors = result.error.errors as ZodIssue[];
+        const unionError = errors.find(
+          (e): e is ZodInvalidUnionIssue => e.code === "invalid_union",
+        );
 
         if (unionError?.unionErrors) {
           // Show the most specific error from union attempts
-          unionError.unionErrors.forEach((ue: any, i: number) => {
+          unionError.unionErrors.forEach((ue, i: number) => {
             if (ue.errors && ue.errors.length > 0) {
               console.log();
               console.log(`${colors.gray}Schema attempt ${i + 1}:${colors.reset}`);
-              ue.errors.slice(0, 3).forEach((e: any) => {
+              ue.errors.slice(0, 3).forEach((e) => {
                 console.log(formatError(e));
               });
             }
           });
         } else {
           // Show regular errors
-          errors.slice(0, 10).forEach((e: any) => {
+          errors.slice(0, 10).forEach((e) => {
             console.log(formatError(e));
           });
         }
@@ -185,12 +192,13 @@ function validateFile(filePath: string) {
         process.exit(1);
       }
     }
-  } catch (error: any) {
-    if (error.message.includes("JSON")) {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message.includes("JSON")) {
       console.error(`${colors.red}Error:${colors.reset} Invalid JSON in file`);
       console.error(`  ${error.message}`);
     } else {
-      console.error(`${colors.red}Error:${colors.reset} ${error.message}`);
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`${colors.red}Error:${colors.reset} ${message}`);
     }
     process.exit(1);
   }
