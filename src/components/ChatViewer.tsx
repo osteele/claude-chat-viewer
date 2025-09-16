@@ -269,7 +269,7 @@ const getFileInfo = (content: string, inputType: string, language?: string, titl
   };
 };
 
-const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
+const ConversationView: React.FC<{ data: ChatData; onBack?: () => void }> = ({ data, onBack }) => {
   const [showThinking, setShowThinking] = useState(false);
   const [showArtifactsInExport, setShowArtifactsInExport] = useState(true);
   const [showColophonInExport, setShowColophonInExport] = useState(true);
@@ -558,7 +558,10 @@ const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
 
   // Find if there are any tool_use artifacts with content
   const hasArtifacts = data.chat_messages.some((message) =>
-    message.content.some((item) => item.type === "tool_use" && item.name === "artifacts" && item.input?.content?.trim()),
+    message.content.some(
+      (item) =>
+        item.type === "tool_use" && item.name === "artifacts" && item.input?.content?.trim(),
+    ),
   );
 
   return (
@@ -568,6 +571,22 @@ const ConversationView: React.FC<{ data: ChatData }> = ({ data }) => {
         <div className="print:hidden mb-6 space-y-3">
           {/* Primary Actions */}
           <div className="flex flex-wrap gap-2">
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded border border-gray-300 transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+                Back to Input
+              </button>
+            )}
             <button
               onClick={() => {
                 window.print();
@@ -855,19 +874,22 @@ const ChatViewer: React.FC = () => {
     tab: "json" | "view" | "browse" | "master-detail",
     conversationId?: string,
   ) => {
+    // Keep file param in query string
     const params = new URLSearchParams(window.location.search);
     const fileParam = params.get("file");
 
     const newPath = window.location.pathname;
-    let newSearch = fileParam ? `?file=${fileParam}` : "";
+    const newSearch = fileParam ? `?file=${fileParam}` : "";
 
+    // Use hash for tab and conversation params
+    let newHash = "";
     if (tab === "browse") {
-      newSearch += `${newSearch ? "&" : "?"}tab=browse`;
+      newHash = "#tab=browse";
     } else if (tab === "view" && conversationId) {
-      newSearch += `${newSearch ? "&" : "?"}tab=view&conversation=${conversationId}`;
+      newHash = `#tab=view&conversation=${conversationId}`;
     }
 
-    const newURL = newPath + newSearch;
+    const newURL = newPath + newSearch + newHash;
 
     // Only push state if we're not navigating via popstate
     if (!isNavigating) {
@@ -1004,9 +1026,10 @@ const ChatViewer: React.FC = () => {
     const handlePopState = () => {
       setIsNavigating(true);
 
-      const params = new URLSearchParams(window.location.search);
-      const tabParam = params.get("tab");
-      const conversationParam = params.get("conversation");
+      // Parse hash parameters
+      const hashParams = new URLSearchParams(window.location.hash.slice(1));
+      const tabParam = hashParams.get("tab");
+      const conversationParam = hashParams.get("conversation");
 
       if (tabParam === "browse" && conversationList) {
         setActiveTab("browse");
@@ -1036,8 +1059,11 @@ const ChatViewer: React.FC = () => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const fileParam = params.get("file");
-    const tabParam = params.get("tab");
-    const conversationParam = params.get("conversation");
+
+    // Check hash parameters for tab and conversation
+    const hashParams = new URLSearchParams(window.location.hash.slice(1));
+    const tabParam = hashParams.get("tab");
+    const conversationParam = hashParams.get("conversation");
 
     if (fileParam) {
       setIsLoading(true);
@@ -1387,7 +1413,7 @@ const ChatViewer: React.FC = () => {
               onBack={handleBackToInput}
             />
           ) : activeTab === "view" && chatData ? (
-            <ConversationView data={chatData} />
+            <ConversationView data={chatData} onBack={handleBackToInput} />
           ) : null}
         </div>
 

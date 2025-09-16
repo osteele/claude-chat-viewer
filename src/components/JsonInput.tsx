@@ -1,6 +1,7 @@
 import JSZip from "jszip";
 import { AlertCircle, Archive, CheckCircle, Clipboard, FileJson, Upload } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { z } from "zod";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,7 +14,6 @@ import sampleMath from "../data/sampleConversations/math-tutoring.json";
 // Import sample conversations
 import samplePython from "../data/sampleConversations/python.json";
 import sampleWebDev from "../data/sampleConversations/webdev.json";
-import type { z } from "zod";
 import { type ChatData, ChatDataSchema } from "../schemas/chat";
 
 const STORAGE_KEY = "chat-viewer-json";
@@ -45,36 +45,39 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
   }, [jsonText]);
 
   // Live JSON validation with debouncing
-  const validateJson = useCallback((text: string) => {
-    if (!text.trim()) {
-      setIsValidJson(false);
-      // Only clear error if it's a syntax error
-      if (error?.startsWith("Syntax error") || error?.includes("JSON appears incomplete")) {
-        setError(null);
+  const validateJson = useCallback(
+    (text: string) => {
+      if (!text.trim()) {
+        setIsValidJson(false);
+        // Only clear error if it's a syntax error
+        if (error?.startsWith("Syntax error") || error?.includes("JSON appears incomplete")) {
+          setError(null);
+        }
+        return;
       }
-      return;
-    }
 
-    try {
-      JSON.parse(text);
-      setIsValidJson(true);
-      // Only clear error if it's a syntax error
-      if (error?.startsWith("Syntax error") || error?.includes("JSON appears incomplete")) {
-        setError(null);
-      }
-    } catch (err) {
-      setIsValidJson(false);
-      // Only show error for non-empty input after user stops typing
-      if (text.trim().length > 10) {
-        if (err instanceof Error) {
-          const errorMessage = err.message.includes("Unexpected end")
-            ? "JSON appears incomplete - keep typing or check for missing brackets"
-            : `Syntax error: ${err.message.split(" at position")[0]}`;
-          setError(errorMessage);
+      try {
+        JSON.parse(text);
+        setIsValidJson(true);
+        // Only clear error if it's a syntax error
+        if (error?.startsWith("Syntax error") || error?.includes("JSON appears incomplete")) {
+          setError(null);
+        }
+      } catch (err) {
+        setIsValidJson(false);
+        // Only show error for non-empty input after user stops typing
+        if (text.trim().length > 10) {
+          if (err instanceof Error) {
+            const errorMessage = err.message.includes("Unexpected end")
+              ? "JSON appears incomplete - keep typing or check for missing brackets"
+              : `Syntax error: ${err.message.split(" at position")[0]}`;
+            setError(errorMessage);
+          }
         }
       }
-    }
-  }, [error]);
+    },
+    [error],
+  );
 
   useEffect(() => {
     // Clear previous timeout
@@ -123,7 +126,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
               err.unionErrors.forEach((unionError: any) => {
                 if (unionError.errors && unionError.errors.length > 0) {
                   unionError.errors.slice(0, 3).forEach((e: any) => {
-                    const path = e.path.join('.');
+                    const path = e.path.join(".");
                     const message = e.message || "Required field missing";
                     if (path) {
                       errors.push(`  - ${path}: ${message}`);
@@ -132,7 +135,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
                 }
               });
             } else {
-              const path = err.path.join('.');
+              const path = err.path.join(".");
               const message = err.message || "Validation error";
               if (path) {
                 errors.push(`  - ${path}: ${message}`);
@@ -141,7 +144,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
           });
 
           if (errors.length > 0) {
-            console.error(errors.slice(0, 5).join('\n'));
+            console.error(errors.slice(0, 5).join("\n"));
             if (errors.length > 5) {
               console.error(`  ... and ${errors.length - 5} more errors`);
             }
@@ -170,7 +173,8 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
 
           // Show details of first few invalid conversations
           invalidConversations.slice(0, 3).forEach((item) => {
-            const convName = (item.conversation as { name?: string })?.name || `Conversation ${item.index + 1}`;
+            const convName =
+              (item.conversation as { name?: string })?.name || `Conversation ${item.index + 1}`;
             errorDetails.push(`\n• ${convName}:`);
 
             // Get the actual validation errors
@@ -252,7 +256,8 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
           );
 
           invalidConversations.slice(0, 3).forEach((item) => {
-            const convName = (item.conversation as { name?: string })?.name || `Conversation ${item.index + 1}`;
+            const convName =
+              (item.conversation as { name?: string })?.name || `Conversation ${item.index + 1}`;
             errorDetails.push(`\n• ${convName}:`);
 
             // Get the actual validation errors
@@ -331,7 +336,8 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
 
       // Show details of first few invalid conversations
       invalidConversations.slice(0, 3).forEach((item) => {
-        const convName = (item.conversation as { name?: string })?.name || `Conversation ${item.index + 1}`;
+        const convName =
+          (item.conversation as { name?: string })?.name || `Conversation ${item.index + 1}`;
         errorDetails.push(`\n📄 ${convName}:`);
 
         const firstErrors = item.result.error?.errors.slice(0, 2) || [];
@@ -376,7 +382,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
       setOptions([]);
     } else {
       // Log validation errors to console in a readable format
-      console.error('Conversation validation failed:');
+      console.error("Conversation validation failed:");
 
       // Extract and log the most relevant errors
       const relevantErrors: string[] = [];
@@ -385,7 +391,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
           err.unionErrors.forEach((unionError: any) => {
             if (unionError.errors && unionError.errors.length > 0) {
               unionError.errors.slice(0, 5).forEach((e: any) => {
-                const path = e.path.join('.');
+                const path = e.path.join(".");
                 const message = e.message || "Required field missing";
                 if (path) {
                   relevantErrors.push(`  - ${path}: ${message}`);
@@ -396,7 +402,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
             }
           });
         } else {
-          const path = err.path.join('.');
+          const path = err.path.join(".");
           const message = err.message || "Validation error";
           if (path) {
             relevantErrors.push(`  - ${path}: ${message}`);
@@ -407,12 +413,12 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
       });
 
       if (relevantErrors.length > 0) {
-        console.error('Validation errors:\n' + relevantErrors.slice(0, 10).join('\n'));
+        console.error(`Validation errors:\n${relevantErrors.slice(0, 10).join("\n")}`);
         if (relevantErrors.length > 10) {
           console.error(`  ... and ${relevantErrors.length - 10} more errors`);
         }
       } else {
-        console.error('  File structure doesn\'t match expected Claude conversation format');
+        console.error("  File structure doesn't match expected Claude conversation format");
       }
 
       // Create a more user-friendly error message
@@ -459,12 +465,12 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
             err.unionErrors.forEach((unionError: any) => {
               if (unionError.errors && unionError.errors.length > 0) {
                 unionError.errors.slice(0, 5).forEach((e: any) => {
-                  const subPath = e.path.join('.');
+                  const subPath = e.path.join(".");
                   const subMessage = e.message || "Required field missing";
                   if (!errorsByPath.has(subPath)) {
                     errorsByPath.set(subPath, []);
                   }
-                  errorsByPath.get(subPath)!.push(subMessage);
+                  errorsByPath.get(subPath)?.push(subMessage);
                 });
               }
             });
@@ -507,8 +513,12 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
         errorSummary.push(`\n... and ${errorCount - 10} more errors`);
       } else if (errorCount === 0) {
         // If no specific errors were extracted, show a generic message
-        errorSummary.push(`• The file structure doesn't match any expected Claude conversation format`);
-        errorSummary.push(`• Missing required fields: uuid, name, created_at, updated_at, chat_messages`);
+        errorSummary.push(
+          `• The file structure doesn't match any expected Claude conversation format`,
+        );
+        errorSummary.push(
+          `• Missing required fields: uuid, name, created_at, updated_at, chat_messages`,
+        );
       }
 
       // Add helpful context

@@ -219,10 +219,7 @@ const ConversationItemSchema = z
   .passthrough(); // Allow additional fields
 
 // Union type that accepts both formats
-export const ChatDataSchema = z.union([
-  IndividualChatSchema,
-  ConversationItemSchema,
-]);
+export const ChatDataSchema = z.union([IndividualChatSchema, ConversationItemSchema]);
 
 // Export inferred types
 export type ChatData = z.infer<typeof ChatDataSchema>;

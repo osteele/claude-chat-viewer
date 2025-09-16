@@ -11,9 +11,9 @@
  *   bun tools/validate-conversations.ts ./inputs/conversations.json
  */
 
-import { ChatDataSchema } from "../src/schemas/chat";
 import fs from "node:fs";
 import path from "node:path";
+import { ChatDataSchema } from "../src/schemas/chat";
 
 // ANSI color codes
 const colors = {
@@ -86,7 +86,7 @@ function validateFile(filePath: string) {
           const unionError = result.error.errors.find((e: any) => e.code === "invalid_union");
           let specificErrors = firstErrors;
 
-          if (unionError && unionError.unionErrors && unionError.unionErrors.length > 0) {
+          if (unionError?.unionErrors && unionError.unionErrors.length > 0) {
             // Get the most relevant error from union attempts
             const relevantUnion = unionError.unionErrors[unionError.unionErrors.length - 1];
             if (relevantUnion.errors && relevantUnion.errors.length > 0) {
@@ -97,7 +97,7 @@ function validateFile(filePath: string) {
           errors.push({
             index,
             name,
-            errors: specificErrors
+            errors: specificErrors,
           });
         }
       });
@@ -110,7 +110,7 @@ function validateFile(filePath: string) {
         console.log();
         console.log(`${colors.yellow}Validation errors (showing first 10):${colors.reset}`);
 
-        errors.slice(0, 10).forEach(err => {
+        errors.slice(0, 10).forEach((err) => {
           console.log();
           console.log(`${colors.bold}[${err.index}] ${err.name}${colors.reset}`);
           err.errors.forEach((e: any) => {
@@ -120,13 +120,14 @@ function validateFile(filePath: string) {
 
         if (errors.length > 10) {
           console.log();
-          console.log(`${colors.gray}... and ${errors.length - 10} more conversations with errors${colors.reset}`);
+          console.log(
+            `${colors.gray}... and ${errors.length - 10} more conversations with errors${colors.reset}`,
+          );
         }
       }
 
       // Exit with error code if any invalid
       process.exit(invalidCount > 0 ? 1 : 0);
-
     } else {
       // Single conversation
       const result = ChatDataSchema.safeParse(data);
@@ -140,9 +141,8 @@ function validateFile(filePath: string) {
 
         // Count artifacts
         const artifactCount = result.data.chat_messages
-          .flatMap(m => m.content)
-          .filter(c => c.type === "tool_use" && c.name === "artifacts")
-          .length;
+          .flatMap((m) => m.content)
+          .filter((c) => c.type === "tool_use" && c.name === "artifacts").length;
 
         if (artifactCount > 0) {
           console.log(`  Artifacts: ${artifactCount}`);
@@ -164,7 +164,7 @@ function validateFile(filePath: string) {
         const errors = result.error.errors;
         const unionError = errors.find((e: any) => e.code === "invalid_union");
 
-        if (unionError && unionError.unionErrors) {
+        if (unionError?.unionErrors) {
           // Show the most specific error from union attempts
           unionError.unionErrors.forEach((ue: any, i: number) => {
             if (ue.errors && ue.errors.length > 0) {
