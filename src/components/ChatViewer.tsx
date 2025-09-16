@@ -269,6 +269,55 @@ const getFileInfo = (content: string, inputType: string, language?: string, titl
   };
 };
 
+const extractExtension = (value: string) => {
+  const lastSegment = value.split("/").pop() ?? "";
+  const match = lastSegment.match(/\.([^./]+)$/);
+  return match ? match[1] : "";
+};
+
+const ensureExtension = (name: string, extension: string) => {
+  if (!extension) return name;
+  if (/\.[^./]+$/.test(name)) {
+    return name;
+  }
+  return `${name}.${extension}`;
+};
+
+// Prevent unsafe names when adding files to the export archive
+const sanitizeZipEntryName = (input: string, fallback: string) => {
+  const sanitize = (value: string) => {
+    const normalized = value.replace(/\\/g, "/");
+    const withoutDrive = normalized.replace(/^[A-Za-z]:/, "");
+    const trimmedLeading = withoutDrive.replace(/^\/+/, "");
+    const parts = trimmedLeading.split("/").filter((part) => part && part !== "." && part !== "..");
+    if (parts.length === 0) return "";
+    let safe = parts.join("/");
+    safe = safe.replace(/[<>:"|?*]/g, "_");
+    safe = safe
+      .split("")
+      .map((char) => (char.charCodeAt(0) < 32 ? "_" : char))
+      .join("");
+    safe = safe.replace(/^\.+/, "").trim();
+    if (!safe) return "";
+    if (safe.length > 200) {
+      const extMatch = safe.match(/(\.[^./]+)$/);
+      const ext = extMatch ? extMatch[1] : "";
+      const base = ext ? safe.slice(0, safe.length - ext.length) : safe;
+      const maxBaseLength = ext ? Math.max(1, 200 - ext.length) : 200;
+      safe = `${base.slice(0, maxBaseLength)}${ext}`;
+    }
+    return safe;
+  };
+
+  const candidate = sanitize(input);
+  if (candidate) {
+    return candidate;
+  }
+
+  const fallbackCandidate = sanitize(fallback);
+  return fallbackCandidate || "artifact.txt";
+};
+
 const ConversationView: React.FC<{ data: ChatData; onBack?: () => void }> = ({ data, onBack }) => {
   const [showThinking, setShowThinking] = useState(false);
   const [showArtifactsInExport, setShowArtifactsInExport] = useState(true);
@@ -528,18 +577,12 @@ const ConversationView: React.FC<{ data: ChatData; onBack?: () => void }> = ({ d
             item.input.title,
           );
 
-          let fileName: string;
-          if (fileInfo.path) {
-            // Use the path from the first line comment
-            fileName = fileInfo.path;
-          } else if (fileInfo.fileName) {
-            // Use the complete filename if provided
-            fileName = fileInfo.fileName;
-          } else {
-            // Generate a filename using the title or default name with extension
-            const baseFileName = item.input.title || `artifact-${messageIndex}-${itemIndex}`;
-            fileName = `${baseFileName}.${fileInfo.extension}`;
-          }
+          const fallbackBaseName = item.input.title || `artifact-${messageIndex}-${itemIndex}`;
+          const fallbackExtension =
+            fileInfo.extension || (fileInfo.path ? extractExtension(fileInfo.path) : "") || "txt";
+          const fallbackName = ensureExtension(fallbackBaseName, fallbackExtension);
+          const rawName = fileInfo.path ?? fileInfo.fileName ?? fallbackName;
+          const fileName = sanitizeZipEntryName(rawName, fallbackName);
 
           // Create folders if the path includes directories
           zip.file(fileName, fileInfo.content || item.input.content || "");

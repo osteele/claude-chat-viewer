@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 
 interface ArtifactProps {
   title: string;
@@ -45,6 +51,9 @@ export function Artifact({
         <SheetContent className="w-[600px] sm:w-[540px] overflow-y-auto">
           <SheetHeader>
             <SheetTitle>{title}</SheetTitle>
+            <SheetDescription className="sr-only">
+              Detailed content for the selected artifact.
+            </SheetDescription>
           </SheetHeader>
           <div className="mt-4">
             <pre className="p-4 rounded-lg bg-gray-50 overflow-x-auto">
