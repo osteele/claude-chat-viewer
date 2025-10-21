@@ -1,5 +1,6 @@
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
+import { X } from "lucide-react";
 import mime from "mime";
 import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
@@ -1019,6 +1020,11 @@ const ChatViewer: React.FC = () => {
     window.scrollTo(0, 0);
   };
 
+  const handleDismissWarning = () => {
+    setLoadWarning(null);
+    setFullErrorDetails(null);
+  };
+
   const handleBackToInput = () => {
     setConversationList(null);
     setChatData(null);
@@ -1301,7 +1307,7 @@ const ChatViewer: React.FC = () => {
               className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md relative"
               style={{ minHeight: "auto" }}
             >
-              <div className="text-red-700 whitespace-pre-wrap font-mono text-sm overflow-visible">
+              <div className="text-red-700 whitespace-pre-wrap font-mono text-sm overflow-visible pr-24">
                 {loadWarning.split("\n").map((line, idx) => {
                   // Make GitHub URLs clickable
                   if (line.includes("https://github.com/")) {
@@ -1332,24 +1338,34 @@ const ChatViewer: React.FC = () => {
                   );
                 })}
               </div>
-              <button
-                type="button"
-                onClick={(e) => {
-                  navigator.clipboard.writeText(fullErrorDetails || loadWarning);
-                  const btn = e.currentTarget;
-                  const originalText = btn.textContent;
-                  btn.textContent = "Copied!";
-                  btn.classList.add("text-green-600");
-                  setTimeout(() => {
-                    btn.textContent = originalText;
-                    btn.classList.remove("text-green-600");
-                  }, 2000);
-                }}
-                className="absolute top-2 right-2 px-2 py-1 text-xs bg-white hover:bg-gray-50 border border-gray-300 rounded transition-colors"
-                title="Copy error message to clipboard"
-              >
-                Copy Error
-              </button>
+              <div className="absolute top-2 right-2 flex gap-1">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    navigator.clipboard.writeText(fullErrorDetails || loadWarning);
+                    const btn = e.currentTarget;
+                    const originalText = btn.textContent;
+                    btn.textContent = "Copied!";
+                    btn.classList.add("text-green-600");
+                    setTimeout(() => {
+                      btn.textContent = originalText;
+                      btn.classList.remove("text-green-600");
+                    }, 2000);
+                  }}
+                  className="px-2 py-1 text-xs bg-white hover:bg-gray-50 border border-gray-300 rounded transition-colors"
+                  title="Copy error message to clipboard"
+                >
+                  Copy Error
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDismissWarning}
+                  className="px-2 py-1 text-xs bg-white hover:bg-gray-50 border border-gray-300 rounded transition-colors"
+                  title="Dismiss this warning"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
             </div>
           )}
 
@@ -1361,7 +1377,7 @@ const ChatViewer: React.FC = () => {
             <div className="fixed inset-0 top-[49px] flex flex-col">
               {loadWarning && (
                 <div className="p-4 bg-red-50 border-b border-red-200 relative flex-shrink-0">
-                  <div className="text-red-700 whitespace-pre-wrap font-mono text-sm overflow-visible">
+                  <div className="text-red-700 whitespace-pre-wrap font-mono text-sm overflow-visible pr-24">
                     {loadWarning.split("\n").map((line, idx) => {
                       // Make GitHub URLs clickable
                       if (line.includes("https://github.com/")) {
@@ -1392,24 +1408,34 @@ const ChatViewer: React.FC = () => {
                       );
                     })}
                   </div>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      navigator.clipboard.writeText(fullErrorDetails || loadWarning);
-                      const btn = e.currentTarget;
-                      const originalText = btn.textContent;
-                      btn.textContent = "Copied!";
-                      btn.classList.add("text-green-600");
-                      setTimeout(() => {
-                        btn.textContent = originalText;
-                        btn.classList.remove("text-green-600");
-                      }, 2000);
-                    }}
-                    className="absolute top-2 right-2 px-2 py-1 text-xs bg-white hover:bg-gray-50 border border-gray-300 rounded transition-colors"
-                    title="Copy error message to clipboard"
-                  >
-                    Copy Error
-                  </button>
+                  <div className="absolute top-2 right-2 flex gap-1">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        navigator.clipboard.writeText(fullErrorDetails || loadWarning);
+                        const btn = e.currentTarget;
+                        const originalText = btn.textContent;
+                        btn.textContent = "Copied!";
+                        btn.classList.add("text-green-600");
+                        setTimeout(() => {
+                          btn.textContent = originalText;
+                          btn.classList.remove("text-green-600");
+                        }, 2000);
+                      }}
+                      className="px-2 py-1 text-xs bg-white hover:bg-gray-50 border border-gray-300 rounded transition-colors"
+                      title="Copy error message to clipboard"
+                    >
+                      Copy Error
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDismissWarning}
+                      className="px-2 py-1 text-xs bg-white hover:bg-gray-50 border border-gray-300 rounded transition-colors"
+                      title="Dismiss this warning"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
                 </div>
               )}
               <div className="flex-1 overflow-hidden">
