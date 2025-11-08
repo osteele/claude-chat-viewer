@@ -44,8 +44,8 @@ const ToolResultSchema = z.object({
   content: z.array(
     z
       .object({
-        type: z.string(),
-        text: z.string(),
+        type: z.string().optional(), // Made optional for newer export formats
+        text: z.string().optional(), // Made optional for newer export formats
         uuid: z.string().optional(),
       })
       .passthrough(),
