@@ -1,13 +1,15 @@
 import { z } from "zod";
 
-const AttachmentSchema = z.object({
-  id: z.string(),
-  file_name: z.string(),
-  file_size: z.number(),
-  file_type: z.string(),
-  extracted_content: z.string().optional(),
-  created_at: z.string(),
-});
+const AttachmentSchema = z
+  .object({
+    id: z.string().optional(), // Made optional for newer export formats
+    file_name: z.string().optional(), // Made optional for newer export formats
+    file_size: z.number().optional(), // Made optional for newer export formats
+    file_type: z.string().optional(), // Made optional for newer export formats
+    extracted_content: z.string().optional(),
+    created_at: z.string().optional(), // Made optional for newer export formats
+  })
+  .passthrough(); // Allow additional fields from newer export formats
 
 const ToolUseSchema = z.object({
   type: z.literal("tool_use"),
@@ -42,8 +44,8 @@ const ToolResultSchema = z.object({
   content: z.array(
     z
       .object({
-        type: z.string(),
-        text: z.string(),
+        type: z.string().optional(), // Made optional for newer export formats
+        text: z.string().optional(), // Made optional for newer export formats
         uuid: z.string().optional(),
       })
       .passthrough(),
@@ -111,43 +113,47 @@ const PreviewAssetSchema = z
   })
   .optional();
 
-const FileSchema = z.object({
-  file_kind: z.string().optional(),
-  file_uuid: z.string(),
-  file_name: z.string(),
-  created_at: z.string(),
-  thumbnail_url: z.string().optional(),
-  preview_url: z.string().optional(),
-  thumbnail_asset: ThumbnailAssetSchema,
-  preview_asset: PreviewAssetSchema,
-});
+const FileSchema = z
+  .object({
+    file_kind: z.string().optional(),
+    file_uuid: z.string().optional(), // Made optional for newer export formats
+    file_name: z.string().optional(), // Made optional for newer export formats
+    created_at: z.string().optional(), // Made optional for newer export formats
+    thumbnail_url: z.string().optional(),
+    preview_url: z.string().optional(),
+    thumbnail_asset: ThumbnailAssetSchema,
+    preview_asset: PreviewAssetSchema,
+  })
+  .passthrough(); // Allow additional fields from newer export formats
 
-const ChatMessageSchema = z.object({
-  uuid: z.string().describe("Message unique identifier"),
-  index: z.number().default(0).describe("Message index in conversation"), // Default to 0 if not present
-  sender: z.enum(["human", "assistant"]).describe("Message sender"),
-  content: z
-    .array(ContentItemSchema, {
-      required_error: "Message content is required",
-      invalid_type_error: "Message content must be an array",
-    })
-    .describe("Message content items"),
-  text: z.string().describe("Message text"),
-  created_at: z.string().describe("Creation timestamp"),
-  updated_at: z.string().describe("Update timestamp"),
-  truncated: z.boolean().default(false),
-  attachments: z.array(AttachmentSchema).optional(),
-  files: z.array(FileSchema).optional(),
-  files_v2: z.array(FileSchema).optional(),
-  sync_sources: z.array(z.any()).optional(),
-  parent_message_uuid: z.string().optional(),
-});
+const ChatMessageSchema = z
+  .object({
+    uuid: z.string().describe("Message unique identifier"),
+    index: z.number().default(0).describe("Message index in conversation"), // Default to 0 if not present
+    sender: z.enum(["human", "assistant"]).describe("Message sender"),
+    content: z
+      .array(ContentItemSchema, {
+        required_error: "Message content is required",
+        invalid_type_error: "Message content must be an array",
+      })
+      .describe("Message content items"),
+    text: z.string().optional().describe("Message text"), // Made optional for newer export formats
+    created_at: z.string().describe("Creation timestamp"),
+    updated_at: z.string().describe("Update timestamp"),
+    truncated: z.boolean().default(false),
+    attachments: z.array(AttachmentSchema).optional(),
+    files: z.array(FileSchema).optional(),
+    files_v2: z.array(FileSchema).optional(),
+    sync_sources: z.array(z.any()).optional(),
+    parent_message_uuid: z.string().optional(),
+  })
+  .passthrough(); // Allow additional fields from newer export formats
 
 // Message schema for conversations.json format
 const ConversationMessageSchema = z
   .object({
     uuid: z.string(),
-    text: z.string(),
+    text: z.string().optional(), // Made optional for newer export formats
     content: z.array(ContentItemSchema),
     sender: z.enum(["human", "assistant"]),
     created_at: z.string(),

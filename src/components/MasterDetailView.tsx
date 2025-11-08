@@ -55,13 +55,20 @@ export const MasterDetailView: React.FC<MasterDetailViewProps> = ({
 
   // Filter conversations and get search matches
   const { filteredConversations, searchMatches } = (() => {
+    // Sort conversations by updated_at in descending order (newest first)
+    const sortedConversations = [...conversations].sort((a, b) => {
+      const dateA = new Date(a.updated_at).getTime();
+      const dateB = new Date(b.updated_at).getTime();
+      return dateB - dateA; // Descending order (newest first)
+    });
+
     if (!searchQuery.trim()) {
-      return { filteredConversations: conversations, searchMatches: new Map() };
+      return { filteredConversations: sortedConversations, searchMatches: new Map() };
     }
 
     const matchesMap = new Map<string, SearchMatch[]>();
 
-    const filtered = conversations.filter((conversation) => {
+    const filtered = sortedConversations.filter((conversation) => {
       try {
         let searchPattern: RegExp | string;
 
