@@ -30,6 +30,64 @@ interface JsonInputProps {
   onConversationList: (conversations: ChatData[], warning?: string) => void;
 }
 
+// Helper function to extract readable error summary from Zod errors
+function extractErrorSummary(errors: ZodIssue[]): string[] {
+  const errorMap = new Map<string, Set<string>>();
+
+  function processError(err: ZodIssue) {
+    if (err.code === "invalid_union" && (err as ZodInvalidUnionIssue).unionErrors) {
+      // For union errors, find the most specific errors from each attempt
+      (err as ZodInvalidUnionIssue).unionErrors.forEach((unionError) => {
+        if (unionError.errors) {
+          unionError.errors.forEach(processError);
+        }
+      });
+    } else {
+      // Extract path and message
+      const path = err.path.join(".");
+      const message = err.message === "Invalid input" ? "Invalid data format" : err.message;
+
+      // Skip generic/unhelpful messages
+      if (message === "Invalid data format" && path === "") return;
+
+      // Group errors by path
+      if (!errorMap.has(path)) {
+        errorMap.set(path, new Set());
+      }
+      errorMap.get(path)?.add(message);
+    }
+  }
+
+  errors.forEach(processError);
+
+  // Convert to readable format, limiting duplicates
+  const result: string[] = [];
+  const pathArray = Array.from(errorMap.entries());
+
+  // Sort by path for consistent display
+  pathArray.sort(([a], [b]) => a.localeCompare(b));
+
+  pathArray.forEach(([path, messages]) => {
+    if (path) {
+      const uniqueMessages = Array.from(messages);
+      result.push(`  - ${path}: ${uniqueMessages.join(", ")}`);
+    } else {
+      Array.from(messages).forEach(msg => {
+        result.push(`  - ${msg}`);
+      });
+    }
+  });
+
+  // Limit output to first 10 unique paths to keep it concise
+  if (result.length > 10) {
+    const showing = result.slice(0, 10);
+    showing.push(`  - ... and ${result.length - 10} more error paths`);
+    return showing;
+  }
+
+  return result;
+}
+
 export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversationList }) => {
   const [jsonText, setJsonText] = useState(sessionStorage.getItem(STORAGE_KEY) || "");
   const [options, setOptions] = useState<ConversationOption[]>([]);
@@ -181,48 +239,18 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
 
             // Get the actual validation errors
             if (item.result?.error?.errors) {
-              const errors = item.result.error.errors;
+              const errors = item.result.error.errors as ZodIssue[];
+              const processedErrors = extractErrorSummary(errors);
 
-              // Process union errors to get actual validation details
-              const processedErrors: string[] = [];
-              (errors as ZodIssue[]).forEach((err) => {
-                if (err.code === "invalid_union" && (err as ZodInvalidUnionIssue).unionErrors) {
-                  // Extract errors from union attempts
-                  (err as ZodInvalidUnionIssue).unionErrors.forEach((unionError) => {
-                    if (unionError.errors && unionError.errors.length > 0) {
-                      // Extract ALL errors, not just first 2
-                      unionError.errors.forEach((e) => {
-                        const path = e.path.join(".");
-                        if (path && e.message !== "Invalid input") {
-                          processedErrors.push(`  - At "${path}": ${e.message}`);
-                        }
-                      });
-                    }
-                  });
-                } else {
-                  const path = err.path.join(".");
-                  const message =
-                    err.message === "Invalid input" ? "Invalid data format" : err.message;
-                  if (path) {
-                    processedErrors.push(`  - At "${path}": ${message}`);
-                  } else {
-                    processedErrors.push(`  - ${message}`);
-                  }
-                }
-              });
-
-              // Add all processed errors (for copy operation)
               if (processedErrors.length > 0) {
                 processedErrors.forEach((error) => {
                   errorDetails.push(error);
                 });
               } else {
-                // Fallback: provide raw error information
-                errorDetails.push(`  - Validation error: ${JSON.stringify(errors, null, 2)}`);
+                errorDetails.push(`  - Validation failed (unable to parse error details)`);
               }
             } else if (item.result?.error) {
-              // Fallback: stringify the entire error object
-              errorDetails.push(`  - Validation error: ${JSON.stringify(item.result.error, null, 2)}`);
+              errorDetails.push(`  - Validation failed: ${item.result.error.message || "Unknown error"}`);
             } else {
               errorDetails.push(`  - Validation failed (no error details available)`);
             }
@@ -268,48 +296,18 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
 
             // Get the actual validation errors
             if (item.result?.error?.errors) {
-              const errors = item.result.error.errors;
+              const errors = item.result.error.errors as ZodIssue[];
+              const processedErrors = extractErrorSummary(errors);
 
-              // Process union errors to get actual validation details
-              const processedErrors: string[] = [];
-              (errors as ZodIssue[]).forEach((err) => {
-                if (err.code === "invalid_union" && (err as ZodInvalidUnionIssue).unionErrors) {
-                  // Extract errors from union attempts
-                  (err as ZodInvalidUnionIssue).unionErrors.forEach((unionError) => {
-                    if (unionError.errors && unionError.errors.length > 0) {
-                      // Extract ALL errors, not just first 2
-                      unionError.errors.forEach((e) => {
-                        const path = e.path.join(".");
-                        if (path && e.message !== "Invalid input") {
-                          processedErrors.push(`  - At "${path}": ${e.message}`);
-                        }
-                      });
-                    }
-                  });
-                } else {
-                  const path = err.path.join(".");
-                  const message =
-                    err.message === "Invalid input" ? "Invalid data format" : err.message;
-                  if (path) {
-                    processedErrors.push(`  - At "${path}": ${message}`);
-                  } else {
-                    processedErrors.push(`  - ${message}`);
-                  }
-                }
-              });
-
-              // Add all processed errors (for copy operation)
               if (processedErrors.length > 0) {
                 processedErrors.forEach((error) => {
                   errorDetails.push(error);
                 });
               } else {
-                // Fallback: provide raw error information
-                errorDetails.push(`  - Validation error: ${JSON.stringify(errors, null, 2)}`);
+                errorDetails.push(`  - Validation failed (unable to parse error details)`);
               }
             } else if (item.result?.error) {
-              // Fallback: stringify the entire error object
-              errorDetails.push(`  - Validation error: ${JSON.stringify(item.result.error, null, 2)}`);
+              errorDetails.push(`  - Validation failed: ${item.result.error.message || "Unknown error"}`);
             } else {
               errorDetails.push(`  - Validation failed (no error details available)`);
             }
