@@ -424,7 +424,19 @@ const ConversationView: React.FC<{ data: ChatData; onBack?: () => void }> = ({ d
     );
   }
 
-  data.chat_messages.forEach((message) => {
+  // Sort messages by index (ascending order, oldest first) to match Claude UI
+  const sortedMessages = [...data.chat_messages].sort((a, b) => {
+    // Use index if available, otherwise fall back to created_at
+    if (a.index !== undefined && b.index !== undefined) {
+      return a.index - b.index;
+    }
+    // Fallback to created_at if index is not available
+    const dateA = new Date(a.created_at).getTime();
+    const dateB = new Date(b.created_at).getTime();
+    return dateA - dateB;
+  });
+
+  sortedMessages.forEach((message) => {
     message.content.forEach((item) => {
       if (item.type === "tool_use" && item.name === "artifacts") {
         const id = item.input.id || item.input.identifier || `${Date.now()}`;
@@ -802,7 +814,7 @@ const ConversationView: React.FC<{ data: ChatData; onBack?: () => void }> = ({ d
         </div>
       </div>
 
-      {data.chat_messages.map((message) => (
+      {sortedMessages.map((message) => (
         <MessageCard
           key={message.uuid}
           message={message}
