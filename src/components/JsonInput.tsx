@@ -190,7 +190,8 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
                   // Extract errors from union attempts
                   (err as ZodInvalidUnionIssue).unionErrors.forEach((unionError) => {
                     if (unionError.errors && unionError.errors.length > 0) {
-                      unionError.errors.slice(0, 2).forEach((e) => {
+                      // Extract ALL errors, not just first 2
+                      unionError.errors.forEach((e) => {
                         const path = e.path.join(".");
                         if (path && e.message !== "Invalid input") {
                           processedErrors.push(`  - At "${path}": ${e.message}`);
@@ -210,19 +211,20 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
                 }
               });
 
-              // Add the first few processed errors
+              // Add all processed errors (for copy operation)
               if (processedErrors.length > 0) {
-                processedErrors.slice(0, 3).forEach((error) => {
+                processedErrors.forEach((error) => {
                   errorDetails.push(error);
                 });
-                if (processedErrors.length > 3) {
-                  errorDetails.push(`  - ... and ${processedErrors.length - 3} more errors`);
-                }
               } else {
-                errorDetails.push(`  - Validation failed (check console for details)`);
+                // Fallback: provide raw error information
+                errorDetails.push(`  - Validation error: ${JSON.stringify(errors, null, 2)}`);
               }
+            } else if (item.result?.error) {
+              // Fallback: stringify the entire error object
+              errorDetails.push(`  - Validation error: ${JSON.stringify(item.result.error, null, 2)}`);
             } else {
-              errorDetails.push(`  - Validation failed (no specific errors available)`);
+              errorDetails.push(`  - Validation failed (no error details available)`);
             }
           });
 
@@ -275,7 +277,8 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
                   // Extract errors from union attempts
                   (err as ZodInvalidUnionIssue).unionErrors.forEach((unionError) => {
                     if (unionError.errors && unionError.errors.length > 0) {
-                      unionError.errors.slice(0, 2).forEach((e) => {
+                      // Extract ALL errors, not just first 2
+                      unionError.errors.forEach((e) => {
                         const path = e.path.join(".");
                         if (path && e.message !== "Invalid input") {
                           processedErrors.push(`  - At "${path}": ${e.message}`);
@@ -295,19 +298,20 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
                 }
               });
 
-              // Add the first few processed errors
+              // Add all processed errors (for copy operation)
               if (processedErrors.length > 0) {
-                processedErrors.slice(0, 3).forEach((error) => {
+                processedErrors.forEach((error) => {
                   errorDetails.push(error);
                 });
-                if (processedErrors.length > 3) {
-                  errorDetails.push(`  - ... and ${processedErrors.length - 3} more errors`);
-                }
               } else {
-                errorDetails.push(`  - Validation failed (check console for details)`);
+                // Fallback: provide raw error information
+                errorDetails.push(`  - Validation error: ${JSON.stringify(errors, null, 2)}`);
               }
+            } else if (item.result?.error) {
+              // Fallback: stringify the entire error object
+              errorDetails.push(`  - Validation error: ${JSON.stringify(item.result.error, null, 2)}`);
             } else {
-              errorDetails.push(`  - Validation failed (no specific errors available)`);
+              errorDetails.push(`  - Validation failed (no error details available)`);
             }
           });
 
