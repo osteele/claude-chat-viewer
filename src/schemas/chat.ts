@@ -1,13 +1,15 @@
 import { z } from "zod";
 
-const AttachmentSchema = z.object({
-  id: z.string(),
-  file_name: z.string(),
-  file_size: z.number(),
-  file_type: z.string(),
-  extracted_content: z.string().optional(),
-  created_at: z.string(),
-});
+const AttachmentSchema = z
+  .object({
+    id: z.string().optional(), // Made optional for newer export formats
+    file_name: z.string().optional(), // Made optional for newer export formats
+    file_size: z.number().optional(), // Made optional for newer export formats
+    file_type: z.string().optional(), // Made optional for newer export formats
+    extracted_content: z.string().optional(),
+    created_at: z.string().optional(), // Made optional for newer export formats
+  })
+  .passthrough(); // Allow additional fields from newer export formats
 
 const ToolUseSchema = z.object({
   type: z.literal("tool_use"),
@@ -111,16 +113,18 @@ const PreviewAssetSchema = z
   })
   .optional();
 
-const FileSchema = z.object({
-  file_kind: z.string().optional(),
-  file_uuid: z.string(),
-  file_name: z.string(),
-  created_at: z.string(),
-  thumbnail_url: z.string().optional(),
-  preview_url: z.string().optional(),
-  thumbnail_asset: ThumbnailAssetSchema,
-  preview_asset: PreviewAssetSchema,
-});
+const FileSchema = z
+  .object({
+    file_kind: z.string().optional(),
+    file_uuid: z.string().optional(), // Made optional for newer export formats
+    file_name: z.string().optional(), // Made optional for newer export formats
+    created_at: z.string().optional(), // Made optional for newer export formats
+    thumbnail_url: z.string().optional(),
+    preview_url: z.string().optional(),
+    thumbnail_asset: ThumbnailAssetSchema,
+    preview_asset: PreviewAssetSchema,
+  })
+  .passthrough(); // Allow additional fields from newer export formats
 
 const ChatMessageSchema = z
   .object({
