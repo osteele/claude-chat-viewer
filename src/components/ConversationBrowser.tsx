@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { findSearchMatches, type SearchMatch } from "../lib/searchUtils";
 import type { ChatData } from "../schemas/chat";
+import { sortConversations, type SortField, type SortOrder } from "../utils/sorting";
 
 interface ConversationBrowserProps {
   conversations: ChatData[];
@@ -19,6 +20,8 @@ export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
   const [searchMode, setSearchMode] = useState<"title" | "full">("full");
   const [useRegex, setUseRegex] = useState(false);
   const [caseSensitive, setCaseSensitive] = useState(false);
+  const [sortField, setSortField] = useState<SortField>("updated_at");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
   const formatDate = (dateString: string) => {
     try {
@@ -40,14 +43,8 @@ export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
 
   // Filter conversations and get search matches
   const { filteredConversations, searchMatches } = useMemo(() => {
-    let conversationsToFilter = conversations;
-
-    // Sort conversations by updated_at in descending order (newest first)
-    conversationsToFilter = [...conversations].sort((a, b) => {
-      const dateA = new Date(a.updated_at).getTime();
-      const dateB = new Date(b.updated_at).getTime();
-      return dateB - dateA; // Descending order (newest first)
-    });
+    // Sort conversations using the selected sort field and order
+    const conversationsToFilter = sortConversations(conversations, sortField, sortOrder);
 
     if (!searchQuery.trim()) {
       return { filteredConversations: conversationsToFilter, searchMatches: new Map() };
@@ -130,7 +127,7 @@ export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
     });
 
     return { filteredConversations: filtered, searchMatches: matchesMap };
-  }, [conversations, searchQuery, searchMode, useRegex, caseSensitive]);
+  }, [conversations, searchQuery, searchMode, useRegex, caseSensitive, sortField, sortOrder]);
 
   return (
     <div className="max-w-6xl mx-auto p-6">
@@ -236,6 +233,60 @@ export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
               );
             }
           })()}
+      </div>
+
+      {/* Sort Controls */}
+      <div className="mb-6 flex flex-wrap gap-4 items-center bg-gray-50 p-4 rounded-lg border border-gray-200">
+        <span className="text-sm font-medium text-gray-700">Sort by:</span>
+        <div className="flex gap-2">
+          <label className="flex items-center gap-1 cursor-pointer">
+            <input
+              type="radio"
+              name="sortField"
+              value="created_at"
+              checked={sortField === "created_at"}
+              onChange={(e) => setSortField(e.target.value as SortField)}
+              className="w-3 h-3"
+            />
+            <span className="text-sm">Created Date</span>
+          </label>
+          <label className="flex items-center gap-1 cursor-pointer">
+            <input
+              type="radio"
+              name="sortField"
+              value="updated_at"
+              checked={sortField === "updated_at"}
+              onChange={(e) => setSortField(e.target.value as SortField)}
+              className="w-3 h-3"
+            />
+            <span className="text-sm">Modified Date</span>
+          </label>
+        </div>
+        <span className="text-gray-300">|</span>
+        <div className="flex gap-2">
+          <label className="flex items-center gap-1 cursor-pointer">
+            <input
+              type="radio"
+              name="sortOrder"
+              value="desc"
+              checked={sortOrder === "desc"}
+              onChange={(e) => setSortOrder(e.target.value as SortOrder)}
+              className="w-3 h-3"
+            />
+            <span className="text-sm">Newest First</span>
+          </label>
+          <label className="flex items-center gap-1 cursor-pointer">
+            <input
+              type="radio"
+              name="sortOrder"
+              value="asc"
+              checked={sortOrder === "asc"}
+              onChange={(e) => setSortOrder(e.target.value as SortOrder)}
+              className="w-3 h-3"
+            />
+            <span className="text-sm">Oldest First</span>
+          </label>
+        </div>
       </div>
 
       <div className="grid gap-4">

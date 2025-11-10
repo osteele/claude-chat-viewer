@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { findSearchMatches, type SearchMatch } from "../lib/searchUtils";
 import type { ChatData } from "../schemas/chat";
+import { sortConversations, type SortField, type SortOrder } from "../utils/sorting";
 
 interface MasterDetailViewProps {
   conversations: ChatData[];
@@ -24,6 +25,8 @@ export const MasterDetailView: React.FC<MasterDetailViewProps> = ({
   const [useRegex, setUseRegex] = useState(false);
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sortField, setSortField] = useState<SortField>("updated_at");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
   // Auto-collapse sidebar on mobile by default
   useEffect(() => {
@@ -55,12 +58,8 @@ export const MasterDetailView: React.FC<MasterDetailViewProps> = ({
 
   // Filter conversations and get search matches
   const { filteredConversations, searchMatches } = (() => {
-    // Sort conversations by updated_at in descending order (newest first)
-    const sortedConversations = [...conversations].sort((a, b) => {
-      const dateA = new Date(a.updated_at).getTime();
-      const dateB = new Date(b.updated_at).getTime();
-      return dateB - dateA; // Descending order (newest first)
-    });
+    // Sort conversations using the selected sort field and order
+    const sortedConversations = sortConversations(conversations, sortField, sortOrder);
 
     if (!searchQuery.trim()) {
       return { filteredConversations: sortedConversations, searchMatches: new Map() };
@@ -254,6 +253,59 @@ export const MasterDetailView: React.FC<MasterDetailViewProps> = ({
                   );
                 }
               })()}
+
+            {/* Sort Controls */}
+            <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
+              <div className="text-xs font-medium text-gray-700">Sort by:</div>
+              <div className="flex flex-wrap gap-2 text-xs">
+                <label className="flex items-center gap-1 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="sortField"
+                    value="created_at"
+                    checked={sortField === "created_at"}
+                    onChange={(e) => setSortField(e.target.value as SortField)}
+                    className="w-3 h-3"
+                  />
+                  <span>Created</span>
+                </label>
+                <label className="flex items-center gap-1 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="sortField"
+                    value="updated_at"
+                    checked={sortField === "updated_at"}
+                    onChange={(e) => setSortField(e.target.value as SortField)}
+                    className="w-3 h-3"
+                  />
+                  <span>Modified</span>
+                </label>
+              </div>
+              <div className="flex flex-wrap gap-2 text-xs">
+                <label className="flex items-center gap-1 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="sortOrder"
+                    value="desc"
+                    checked={sortOrder === "desc"}
+                    onChange={(e) => setSortOrder(e.target.value as SortOrder)}
+                    className="w-3 h-3"
+                  />
+                  <span>Newest First</span>
+                </label>
+                <label className="flex items-center gap-1 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="sortOrder"
+                    value="asc"
+                    checked={sortOrder === "asc"}
+                    onChange={(e) => setSortOrder(e.target.value as SortOrder)}
+                    className="w-3 h-3"
+                  />
+                  <span>Oldest First</span>
+                </label>
+              </div>
+            </div>
           </div>
         </div>
 
