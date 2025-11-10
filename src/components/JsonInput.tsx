@@ -1,4 +1,3 @@
-import JSZip from "jszip";
 import { AlertCircle, Archive, CheckCircle, Clipboard, FileJson, Upload } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ZodInvalidUnionIssue, ZodIssue, z } from "zod";
@@ -588,6 +587,8 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
     // Handle ZIP files
     if (file.name.toLowerCase().endsWith(".zip")) {
       try {
+        // Lazy load JSZip only when processing ZIP files
+        const JSZip = (await import("jszip")).default;
         const zip = await JSZip.loadAsync(file);
 
         // Look for conversations.json in the ZIP
