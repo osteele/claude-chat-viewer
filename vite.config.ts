@@ -20,4 +20,20 @@ export default defineConfig({
     },
   },
   publicDir: "public",
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Split React and React DOM into separate chunk for better caching
+          "vendor-react": ["react", "react-dom"],
+          // Syntax highlighting is lazy loaded but split when loaded
+          "vendor-syntax": ["react-syntax-highlighter", "prismjs"],
+          // JSZip is lazy loaded but split when loaded
+          "vendor-zip": ["jszip"],
+          // Utilities and other libraries
+          "vendor-utils": ["react-markdown", "file-saver", "mime"],
+        },
+      },
+    },
+  },
 } satisfies UserConfig);

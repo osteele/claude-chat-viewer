@@ -1,17 +1,18 @@
 import { saveAs } from "file-saver";
-import JSZip from "jszip";
 import { X } from "lucide-react";
 import mime from "mime";
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { parseMessage } from "../lib/messageParser";
 import { chatToHtml, chatToMarkdown, chatToText } from "../lib/utils";
 import { type ChatData, ChatDataSchema, type ChatMessage } from "../schemas/chat";
 import { Artifact } from "./Artifact";
-import { CodeBlock } from "./CodeBlock";
 import { ConversationBrowser } from "./ConversationBrowser";
 import { JsonInput } from "./JsonInput";
 import { MasterDetailView } from "./MasterDetailView";
+
+// Lazy load CodeBlock to reduce initial bundle size
+const CodeBlock = lazy(() => import("./CodeBlock").then(m => ({ default: m.CodeBlock })));
 
 interface MessageCardProps {
   message: ChatMessage;
@@ -106,12 +107,21 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking, artifa
 
               if (segment.type === "code") {
                 return (
-                  <CodeBlock
+                  <Suspense
                     key={`${message.uuid}-code-${segment.language}-${(segment.path || "").slice(0, 24)}-${segment.content.slice(0, 24)}`}
-                    code={segment.content}
-                    language={segment.language}
-                    path={segment.path}
-                  />
+                    fallback={
+                      <div className="my-4 animate-pulse">
+                        <div className="h-8 bg-gray-200 rounded-t-lg" />
+                        <div className="h-32 bg-gray-100 rounded-b-lg" />
+                      </div>
+                    }
+                  >
+                    <CodeBlock
+                      code={segment.content}
+                      language={segment.language}
+                      path={segment.path}
+                    />
+                  </Suspense>
                 );
               }
 
@@ -526,6 +536,8 @@ const ConversationView: React.FC<{ data: ChatData; onBack?: () => void }> = ({ d
   };
 
   const handleDownloadArtifacts = async () => {
+    // Lazy load JSZip only when downloading artifacts
+    const JSZip = (await import("jszip")).default;
     const zip = new JSZip();
     let artifactCount = 0;
 
