@@ -71,7 +71,7 @@ function extractErrorSummary(errors: ZodIssue[]): string[] {
       const uniqueMessages = Array.from(messages);
       result.push(`  - ${path}: ${uniqueMessages.join(", ")}`);
     } else {
-      Array.from(messages).forEach(msg => {
+      Array.from(messages).forEach((msg) => {
         result.push(`  - ${msg}`);
       });
     }
@@ -249,7 +249,9 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
                 errorDetails.push(`  - Validation failed (unable to parse error details)`);
               }
             } else if (item.result?.error) {
-              errorDetails.push(`  - Validation failed: ${item.result.error.message || "Unknown error"}`);
+              errorDetails.push(
+                `  - Validation failed: ${item.result.error.message || "Unknown error"}`,
+              );
             } else {
               errorDetails.push(`  - Validation failed (no error details available)`);
             }
@@ -306,7 +308,9 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
                 errorDetails.push(`  - Validation failed (unable to parse error details)`);
               }
             } else if (item.result?.error) {
-              errorDetails.push(`  - Validation failed: ${item.result.error.message || "Unknown error"}`);
+              errorDetails.push(
+                `  - Validation failed: ${item.result.error.message || "Unknown error"}`,
+              );
             } else {
               errorDetails.push(`  - Validation failed (no error details available)`);
             }

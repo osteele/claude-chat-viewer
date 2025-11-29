@@ -1,7 +1,7 @@
 import { saveAs } from "file-saver";
 import { X } from "lucide-react";
 import mime from "mime";
-import { Suspense, lazy, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { parseMessage } from "../lib/messageParser";
 import { chatToHtml, chatToMarkdown, chatToText } from "../lib/utils";
@@ -12,7 +12,7 @@ import { JsonInput } from "./JsonInput";
 import { MasterDetailView } from "./MasterDetailView";
 
 // Lazy load CodeBlock to reduce initial bundle size
-const CodeBlock = lazy(() => import("./CodeBlock").then(m => ({ default: m.CodeBlock })));
+const CodeBlock = lazy(() => import("./CodeBlock").then((m) => ({ default: m.CodeBlock })));
 
 interface MessageCardProps {
   message: ChatMessage;
