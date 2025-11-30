@@ -59,8 +59,11 @@ const ToolResultSchema = z.object({
   display_content: z.any().nullable().optional(),
 });
 
-// Flexible content item schema that handles both formats
-const ContentItemSchema = z.union([
+// Known content types that we explicitly handle
+const KnownContentTypes = ["text", "thinking", "voice_note", "tool_use", "tool_result"] as const;
+
+// Base union of known content item schemas
+const KnownContentItemSchema = z.union([
   z
     .object({
       type: z.literal("text"),
@@ -92,6 +95,33 @@ const ContentItemSchema = z.union([
   ToolUseSchema,
   ToolResultSchema,
 ]);
+
+// Flexible content item schema that handles both known and unknown content types
+// Unknown types are converted to text type with a placeholder message
+const ContentItemSchema = z.preprocess((val) => {
+  // If the value has a type field that's not one of our known types,
+  // convert it to a text content item with a message about the unknown type
+  if (
+    val &&
+    typeof val === "object" &&
+    "type" in val &&
+    typeof (val as { type: unknown }).type === "string" &&
+    !KnownContentTypes.includes(
+      (val as { type: string }).type as (typeof KnownContentTypes)[number],
+    )
+  ) {
+    const originalType = (val as { type: string }).type;
+    // Preserve the original data as a text representation
+    const originalData = JSON.stringify(val, null, 2);
+    return {
+      type: "text" as const,
+      text: `[Unknown content type: ${originalType}]\n\n\`\`\`json\n${originalData}\n\`\`\``,
+      _originalType: originalType,
+      _originalData: val,
+    };
+  }
+  return val;
+}, KnownContentItemSchema);
 
 const ThumbnailAssetSchema = z
   .object({

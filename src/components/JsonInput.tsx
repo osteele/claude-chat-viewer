@@ -16,9 +16,6 @@ import samplePython from "../data/sampleConversations/python.json";
 import sampleWebDev from "../data/sampleConversations/webdev.json";
 import { type ChatData, ChatDataSchema } from "../schemas/chat";
 
-const STORAGE_KEY = "chat-viewer-json";
-const MAX_CACHE_SIZE = 100000; // Don't cache files larger than ~100KB
-
 type ConversationOption = {
   name: string;
   uuid: string;
@@ -89,7 +86,7 @@ function extractErrorSummary(errors: ZodIssue[]): string[] {
 }
 
 export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversationList }) => {
-  const [jsonText, setJsonText] = useState(sessionStorage.getItem(STORAGE_KEY) || "");
+  const [jsonText, setJsonText] = useState("");
   const [options, setOptions] = useState<ConversationOption[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -97,10 +94,6 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounter = useRef(0);
   const validationTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
-
-  useEffect(() => {
-    sessionStorage.setItem(STORAGE_KEY, jsonText);
-  }, [jsonText]);
 
   // Live JSON validation with debouncing
   const validateJson = useCallback(
@@ -162,7 +155,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
     }
   };
 
-  const processJsonData = (data: unknown, skipCaching = false) => {
+  const processJsonData = (data: unknown) => {
     // Handle array of conversations
     if (Array.isArray(data)) {
       if (data.length === 0) {
@@ -326,9 +319,6 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
           onConversationList(validConversations, warningMsg);
         } else {
           // Only one conversation and it's valid - show it directly
-          if (!skipCaching && jsonText.length <= MAX_CACHE_SIZE) {
-            localStorage.setItem(STORAGE_KEY, jsonText);
-          }
           onValidJson(validConversations[0]);
         }
         setError(null);
@@ -382,9 +372,6 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
     const result = ChatDataSchema.safeParse(data);
     if (result.success) {
       // Only cache if not skipping and file is reasonably small
-      if (!skipCaching && jsonText.length <= MAX_CACHE_SIZE) {
-        localStorage.setItem(STORAGE_KEY, jsonText);
-      }
       onValidJson(result.data);
       setError(null);
       setOptions([]);
@@ -605,7 +592,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
 
         try {
           const parsedData = JSON.parse(content);
-          processJsonData(parsedData, true);
+          processJsonData(parsedData);
         } catch (err) {
           if (err instanceof Error) {
             setError(`Invalid JSON in ZIP file: ${err.message}`);
@@ -631,8 +618,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
         setJsonText(content);
         try {
           const parsedData = JSON.parse(content);
-          // Skip caching for uploaded files to avoid storage issues with large files
-          processJsonData(parsedData, true);
+          processJsonData(parsedData);
         } catch (err) {
           console.error("JSON parse error:", err);
           if (err instanceof Error) {
@@ -736,10 +722,6 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
       }
     }
   };
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, jsonText);
-  }, [jsonText]);
 
   return (
     <div className="max-w-6xl mx-auto">
