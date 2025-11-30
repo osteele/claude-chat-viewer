@@ -45,10 +45,10 @@ const ToolResultSchema = z.object({
     z
       .object({
         type: z.string().optional(), // Made optional for newer export formats
-        text: z.string().optional(), // Made optional for newer export formats
+        text: z.string().optional(), // Made optional - not all content types have text (e.g., knowledge, rag_reference)
         uuid: z.string().optional(),
       })
-      .passthrough(),
+      .passthrough(), // Allow additional fields like doc_uuid, extras, etc.
   ),
   is_error: z.boolean(),
   start_timestamp: z.string().nullable().optional(),
