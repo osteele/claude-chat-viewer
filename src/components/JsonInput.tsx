@@ -31,13 +31,12 @@ function extractErrorSummary(errors: ZodIssue[]): string[] {
   const errorMap = new Map<string, Set<string>>();
 
   function processError(err: ZodIssue) {
-    if (err.code === "invalid_union" && (err as ZodInvalidUnionIssue).unionErrors) {
-      // For union errors, find the most specific errors from each attempt
-      (err as ZodInvalidUnionIssue).unionErrors.forEach((unionError) => {
-        if (unionError.errors) {
-          unionError.errors.forEach(processError);
-        }
-      });
+    if (err.code === "invalid_union") {
+      const path = err.path.join(".");
+      if (!errorMap.has(path)) {
+        errorMap.set(path, new Set());
+      }
+      errorMap.get(path)?.add("Invalid input");
     } else {
       // Extract path and message
       const path = err.path.join(".");
@@ -233,7 +232,6 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
             if (item.result?.error?.errors) {
               const errors = item.result.error.errors as ZodIssue[];
               const processedErrors = extractErrorSummary(errors);
-
               if (processedErrors.length > 0) {
                 processedErrors.forEach((error) => {
                   errorDetails.push(error);
@@ -292,7 +290,6 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
             if (item.result?.error?.errors) {
               const errors = item.result.error.errors as ZodIssue[];
               const processedErrors = extractErrorSummary(errors);
-
               if (processedErrors.length > 0) {
                 processedErrors.forEach((error) => {
                   errorDetails.push(error);
