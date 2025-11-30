@@ -1,4 +1,3 @@
-import JSZip from "jszip";
 import { AlertCircle, Archive, CheckCircle, Clipboard, FileJson, Upload } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ZodInvalidUnionIssue, ZodIssue, z } from "zod";
@@ -69,7 +68,7 @@ function extractErrorSummary(errors: ZodIssue[]): string[] {
       const uniqueMessages = Array.from(messages);
       result.push(`  - ${path}: ${uniqueMessages.join(", ")}`);
     } else {
-      Array.from(messages).forEach(msg => {
+      Array.from(messages).forEach((msg) => {
         result.push(`  - ${msg}`);
       });
     }
@@ -243,7 +242,9 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
                 errorDetails.push(`  - Validation failed (unable to parse error details)`);
               }
             } else if (item.result?.error) {
-              errorDetails.push(`  - Validation failed: ${item.result.error.message || "Unknown error"}`);
+              errorDetails.push(
+                `  - Validation failed: ${item.result.error.message || "Unknown error"}`,
+              );
             } else {
               errorDetails.push(`  - Validation failed (no error details available)`);
             }
@@ -300,7 +301,9 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
                 errorDetails.push(`  - Validation failed (unable to parse error details)`);
               }
             } else if (item.result?.error) {
-              errorDetails.push(`  - Validation failed: ${item.result.error.message || "Unknown error"}`);
+              errorDetails.push(
+                `  - Validation failed: ${item.result.error.message || "Unknown error"}`,
+              );
             } else {
               errorDetails.push(`  - Validation failed (no error details available)`);
             }
@@ -575,6 +578,8 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
     // Handle ZIP files
     if (file.name.toLowerCase().endsWith(".zip")) {
       try {
+        // Lazy load JSZip only when processing ZIP files
+        const JSZip = (await import("jszip")).default;
         const zip = await JSZip.loadAsync(file);
 
         // Look for conversations.json in the ZIP
