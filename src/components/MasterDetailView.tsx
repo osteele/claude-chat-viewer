@@ -1,7 +1,18 @@
-import { Calendar, ChevronLeft, PanelLeft, PanelLeftClose, Search, X } from "lucide-react";
+import { saveAs } from "file-saver";
+import {
+  Calendar,
+  Check,
+  ChevronLeft,
+  Download,
+  PanelLeft,
+  PanelLeftClose,
+  Search,
+  X,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { findSearchMatches, type SearchMatch } from "../lib/searchUtils";
+import { chatsToMarkdownZip } from "../lib/utils";
 import type { ChatData } from "../schemas/chat";
 import { sortConversations, type SortField, type SortOrder } from "../utils/sorting";
 
@@ -27,6 +38,8 @@ export const MasterDetailView: React.FC<MasterDetailViewProps> = ({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sortField, setSortField] = useState<SortField>("updated_at");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadSuccess, setDownloadSuccess] = useState(false);
 
   // Auto-collapse sidebar on mobile by default
   useEffect(() => {
@@ -137,6 +150,28 @@ export const MasterDetailView: React.FC<MasterDetailViewProps> = ({
     return { filteredConversations: filtered, searchMatches: matchesMap };
   })();
 
+  // Download all currently-listed conversations (filtered when searching, otherwise all)
+  // as a ZIP of individual markdown files.
+  const handleDownloadAllMarkdown = async () => {
+    if (filteredConversations.length === 0 || isDownloading) return;
+
+    setIsDownloading(true);
+    try {
+      const blob = await chatsToMarkdownZip(filteredConversations);
+      const zipName = searchQuery.trim()
+        ? "claude-conversations-search.zip"
+        : "claude-conversations.zip";
+      saveAs(blob, zipName);
+
+      setDownloadSuccess(true);
+      setTimeout(() => setDownloadSuccess(false), 2000);
+    } catch (err) {
+      console.error("Failed to download conversations as markdown:", err);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
@@ -166,6 +201,29 @@ export const MasterDetailView: React.FC<MasterDetailViewProps> = ({
             <h2 className="font-semibold text-sm text-gray-900">
               Conversations ({filteredConversations.length} of {conversations.length})
             </h2>
+
+            {/* Download all listed conversations as markdown */}
+            <Button
+              onClick={handleDownloadAllMarkdown}
+              variant="outline"
+              size="sm"
+              disabled={filteredConversations.length === 0 || isDownloading}
+              className="w-full"
+            >
+              {downloadSuccess ? (
+                <>
+                  <Check className="h-4 w-4 mr-2" />
+                  Downloaded
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4 mr-2" />
+                  {isDownloading
+                    ? "Preparing…"
+                    : `Download ${filteredConversations.length} as Markdown`}
+                </>
+              )}
+            </Button>
 
             {/* Search Bar */}
             <div className="relative">

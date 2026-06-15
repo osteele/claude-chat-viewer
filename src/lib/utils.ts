@@ -263,6 +263,35 @@ export function chatToMarkdown(data: ChatData, options: MarkdownOptions = {}): s
   return markdown;
 }
 
+// Build a filesystem-safe base name for a conversation's markdown file.
+function conversationFileBaseName(data: ChatData): string {
+  const sanitized = (data.name || "").replace(/[^a-z0-9-]/gi, "_").toLowerCase();
+  const trimmed = sanitized.replace(/^_+|_+$/g, "");
+  return trimmed || "untitled-conversation";
+}
+
+// Bundle multiple conversations into a single ZIP, one markdown file per conversation.
+// Names that would collide are disambiguated with a numeric suffix so no entry is lost.
+export async function chatsToMarkdownZip(
+  conversations: ChatData[],
+  options: MarkdownOptions = {},
+): Promise<Blob> {
+  const JSZip = (await import("jszip")).default;
+  const zip = new JSZip();
+  const usedNames = new Map<string, number>();
+
+  conversations.forEach((conversation) => {
+    const base = conversationFileBaseName(conversation);
+    const count = usedNames.get(base) ?? 0;
+    usedNames.set(base, count + 1);
+    const fileName = count === 0 ? `${base}.md` : `${base}-${count + 1}.md`;
+
+    zip.file(fileName, chatToMarkdown(conversation, options));
+  });
+
+  return zip.generateAsync({ type: "blob" });
+}
+
 export function formatValidationErrors(
   json: string,
   errors: Array<{ path: string; message: string }>,
