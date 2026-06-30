@@ -598,9 +598,9 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
         try {
           const parsedData = JSON.parse(content);
 
-          // Build user map from users.json if present
+          // Build user map from users.json if present (used for name lookup)
           let userMap: UserMap | undefined;
-          const usersFile = zip.file("users.json");
+          const usersFile = zip.file(/(?:^|\/)users\.json$/)[0] ?? null;
           if (usersFile) {
             try {
               const usersContent = await usersFile.async("string");
@@ -613,8 +613,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
                     userMap.set(result.data.uuid, result.data);
                   }
                 }
-                // Discard map if it would only have 0 or 1 entries (no filter needed)
-                if (userMap.size < 2) userMap = undefined;
+                if (userMap.size === 0) userMap = undefined;
               }
             } catch {
               // silently ignore malformed users.json

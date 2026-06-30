@@ -39,16 +39,18 @@ export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
   };
 
   const usersWithCounts = useMemo(() => {
-    if (!userMap || userMap.size < 2) return [];
     const countMap = new Map<string, number>();
     for (const conversation of conversations) {
       const uuid = (conversation as { account?: { uuid: string } }).account?.uuid;
       if (uuid) countMap.set(uuid, (countMap.get(uuid) ?? 0) + 1);
     }
-    return Array.from(userMap.values())
-      .filter((user) => countMap.has(user.uuid))
-      .sort((a, b) => (countMap.get(b.uuid) ?? 0) - (countMap.get(a.uuid) ?? 0))
-      .map((user) => ({ ...user, count: countMap.get(user.uuid) ?? 0 }));
+    if (countMap.size < 2) return [];
+    return Array.from(countMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([uuid, count]) => {
+        const user = userMap?.get(uuid);
+        return { uuid, full_name: user?.full_name ?? `User ${uuid.slice(0, 8)}`, count };
+      });
   }, [conversations, userMap]);
 
   const formatDate = (dateString: string) => {

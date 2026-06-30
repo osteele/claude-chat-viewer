@@ -209,8 +209,8 @@ export const UserDataSchema = z
   .object({
     uuid: z.string(),
     full_name: z.string(),
-    email_address: z.string().optional(),
-    verified_phone_number: z.string().optional(),
+    email_address: z.string().nullable().optional(),
+    verified_phone_number: z.string().nullable().optional(),
   })
   .passthrough();
 
