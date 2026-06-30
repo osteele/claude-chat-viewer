@@ -1,8 +1,9 @@
 import { Calendar, ChevronLeft, PanelLeft, PanelLeftClose, Search, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { findSearchMatches, type SearchMatch } from "../lib/searchUtils";
 import type { ChatData } from "../schemas/chat";
+import { type UserMap } from "../schemas/chat";
 import { sortConversations, type SortField, type SortOrder } from "../utils/sorting";
 
 interface MasterDetailViewProps {
@@ -11,6 +12,7 @@ interface MasterDetailViewProps {
   onSelectConversation: (conversation: ChatData) => void;
   onBack: () => void;
   children: React.ReactNode;
+  userMap?: UserMap;
 }
 
 export const MasterDetailView: React.FC<MasterDetailViewProps> = ({
@@ -19,6 +21,7 @@ export const MasterDetailView: React.FC<MasterDetailViewProps> = ({
   onSelectConversation,
   onBack,
   children,
+  userMap,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchMode, setSearchMode] = useState<"title" | "full">("full");
@@ -27,6 +30,32 @@ export const MasterDetailView: React.FC<MasterDetailViewProps> = ({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sortField, setSortField] = useState<SortField>("updated_at");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  const [selectedUserUuids, setSelectedUserUuids] = useState<Set<string>>(new Set());
+
+  const toggleUser = (uuid: string) => {
+    setSelectedUserUuids((prev) => {
+      const next = new Set(prev);
+      if (next.has(uuid)) {
+        next.delete(uuid);
+      } else {
+        next.add(uuid);
+      }
+      return next;
+    });
+  };
+
+  const usersWithCounts = useMemo(() => {
+    if (!userMap || userMap.size < 2) return [];
+    const countMap = new Map<string, number>();
+    for (const conversation of conversations) {
+      const uuid = (conversation as { account?: { uuid: string } }).account?.uuid;
+      if (uuid) countMap.set(uuid, (countMap.get(uuid) ?? 0) + 1);
+    }
+    return Array.from(userMap.values())
+      .filter((user) => countMap.has(user.uuid))
+      .sort((a, b) => (countMap.get(b.uuid) ?? 0) - (countMap.get(a.uuid) ?? 0))
+      .map((user) => ({ ...user, count: countMap.get(user.uuid) ?? 0 }));
+  }, [conversations, userMap]);
 
   // Auto-collapse sidebar on mobile by default
   useEffect(() => {
@@ -61,13 +90,22 @@ export const MasterDetailView: React.FC<MasterDetailViewProps> = ({
     // Sort conversations using the selected sort field and order
     const sortedConversations = sortConversations(conversations, sortField, sortOrder);
 
+    const userFiltered =
+      selectedUserUuids.size === 0
+        ? sortedConversations
+        : sortedConversations.filter((c) =>
+            selectedUserUuids.has(
+              (c as { account?: { uuid: string } }).account?.uuid ?? "",
+            ),
+          );
+
     if (!searchQuery.trim()) {
-      return { filteredConversations: sortedConversations, searchMatches: new Map() };
+      return { filteredConversations: userFiltered, searchMatches: new Map() };
     }
 
     const matchesMap = new Map<string, SearchMatch[]>();
 
-    const filtered = sortedConversations.filter((conversation) => {
+    const filtered = userFiltered.filter((conversation) => {
       try {
         let searchPattern: RegExp | string;
 
@@ -306,6 +344,43 @@ export const MasterDetailView: React.FC<MasterDetailViewProps> = ({
                 </label>
               </div>
             </div>
+
+            {/* User Filter */}
+            {usersWithCounts.length >= 2 && (
+              <div className="mt-3 pt-3 border-t border-gray-200 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-gray-700">Filter by user:</span>
+                  {selectedUserUuids.size > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedUserUuids(new Set())}
+                      className="text-xs text-blue-600 hover:text-blue-800"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <div className="space-y-1 max-h-40 overflow-y-auto">
+                  {usersWithCounts.map((user) => (
+                    <label
+                      key={user.uuid}
+                      className="flex items-center gap-2 cursor-pointer py-0.5"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedUserUuids.has(user.uuid)}
+                        onChange={() => toggleUser(user.uuid)}
+                        className="w-3 h-3 rounded border-gray-300 flex-shrink-0"
+                      />
+                      <span className="text-xs text-gray-700 truncate flex-1">
+                        {user.full_name}
+                      </span>
+                      <span className="text-xs text-gray-400 flex-shrink-0">{user.count}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

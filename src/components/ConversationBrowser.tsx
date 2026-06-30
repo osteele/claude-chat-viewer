@@ -3,18 +3,21 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { findSearchMatches, type SearchMatch } from "../lib/searchUtils";
 import type { ChatData } from "../schemas/chat";
+import { type UserMap } from "../schemas/chat";
 import { sortConversations, type SortField, type SortOrder } from "../utils/sorting";
 
 interface ConversationBrowserProps {
   conversations: ChatData[];
   onSelectConversation: (conversation: ChatData) => void;
   onBack: () => void;
+  userMap?: UserMap;
 }
 
 export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
   conversations,
   onSelectConversation,
   onBack,
+  userMap: _userMap,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchMode, setSearchMode] = useState<"title" | "full">("full");
