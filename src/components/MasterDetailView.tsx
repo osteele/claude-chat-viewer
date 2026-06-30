@@ -2,9 +2,8 @@ import { Calendar, ChevronLeft, PanelLeft, PanelLeftClose, Search, X } from "luc
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { findSearchMatches, type SearchMatch } from "../lib/searchUtils";
-import type { ChatData } from "../schemas/chat";
-import { type UserMap } from "../schemas/chat";
-import { sortConversations, type SortField, type SortOrder } from "../utils/sorting";
+import type { ChatData, UserMap } from "../schemas/chat";
+import { type SortField, type SortOrder, sortConversations } from "../utils/sorting";
 
 interface MasterDetailViewProps {
   conversations: ChatData[];
@@ -94,9 +93,7 @@ export const MasterDetailView: React.FC<MasterDetailViewProps> = ({
       selectedUserUuids.size === 0
         ? sortedConversations
         : sortedConversations.filter((c) =>
-            selectedUserUuids.has(
-              (c as { account?: { uuid: string } }).account?.uuid ?? "",
-            ),
+            selectedUserUuids.has((c as { account?: { uuid: string } }).account?.uuid ?? ""),
           );
 
     if (!searchQuery.trim()) {

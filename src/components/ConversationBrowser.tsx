@@ -2,9 +2,8 @@ import { Calendar, ChevronLeft, Clock, Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { findSearchMatches, type SearchMatch } from "../lib/searchUtils";
-import type { ChatData } from "../schemas/chat";
-import { type UserMap } from "../schemas/chat";
-import { sortConversations, type SortField, type SortOrder } from "../utils/sorting";
+import type { ChatData, UserMap } from "../schemas/chat";
+import { type SortField, type SortOrder, sortConversations } from "../utils/sorting";
 
 interface ConversationBrowserProps {
   conversations: ChatData[];
@@ -79,9 +78,7 @@ export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
       selectedUserUuids.size === 0
         ? conversationsToFilter
         : conversationsToFilter.filter((c) =>
-            selectedUserUuids.has(
-              (c as { account?: { uuid: string } }).account?.uuid ?? "",
-            ),
+            selectedUserUuids.has((c as { account?: { uuid: string } }).account?.uuid ?? ""),
           );
 
     if (!searchQuery.trim()) {
@@ -165,7 +162,16 @@ export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
     });
 
     return { filteredConversations: filtered, searchMatches: matchesMap };
-  }, [conversations, searchQuery, searchMode, useRegex, caseSensitive, sortField, sortOrder, selectedUserUuids]);
+  }, [
+    conversations,
+    searchQuery,
+    searchMode,
+    useRegex,
+    caseSensitive,
+    sortField,
+    sortOrder,
+    selectedUserUuids,
+  ]);
 
   return (
     <div className="max-w-6xl mx-auto p-6">

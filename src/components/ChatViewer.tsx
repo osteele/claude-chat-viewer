@@ -951,6 +951,7 @@ const ChatViewer: React.FC = () => {
   const [isNavigating, setIsNavigating] = useState(false);
   const [useMasterDetail] = useState(true); // Default to master-detail view
   const [userMap, setUserMap] = useState<UserMap | null>(null);
+  const [loadKey, setLoadKey] = useState(0);
 
   // Update URL to reflect current state
   const updateURL = (
@@ -990,8 +991,13 @@ const ChatViewer: React.FC = () => {
     updateURL("view", data.uuid);
   };
 
-  const handleConversationList = (conversations: ChatData[], warning?: string, newUserMap?: UserMap) => {
+  const handleConversationList = (
+    conversations: ChatData[],
+    warning?: string,
+    newUserMap?: UserMap,
+  ) => {
     setUserMap(newUserMap ?? null);
+    setLoadKey((k) => k + 1);
     setConversationList(conversations);
 
     if (warning) {
@@ -1509,6 +1515,7 @@ const ChatViewer: React.FC = () => {
               )}
               <div className="flex-1 overflow-hidden">
                 <MasterDetailView
+                  key={loadKey}
                   conversations={conversationList}
                   selectedConversation={chatData}
                   onSelectConversation={(conversation) => {
@@ -1524,6 +1531,7 @@ const ChatViewer: React.FC = () => {
             </div>
           ) : activeTab === "browse" && conversationList ? (
             <ConversationBrowser
+              key={loadKey}
               conversations={conversationList}
               onSelectConversation={handleSelectFromBrowser}
               onBack={handleBackToInput}
