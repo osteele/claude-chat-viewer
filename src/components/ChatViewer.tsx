@@ -5,7 +5,7 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { parseMessage } from "../lib/messageParser";
 import { chatToHtml, chatToMarkdown, chatToText } from "../lib/utils";
-import { type ChatData, ChatDataSchema, type ChatMessage } from "../schemas/chat";
+import { type ChatData, ChatDataSchema, type ChatMessage, type UserMap } from "../schemas/chat";
 import { Artifact } from "./Artifact";
 import { ConversationBrowser } from "./ConversationBrowser";
 import { JsonInput } from "./JsonInput";
@@ -950,6 +950,7 @@ const ChatViewer: React.FC = () => {
   const [fullErrorDetails, setFullErrorDetails] = useState<string | null>(null);
   const [isNavigating, setIsNavigating] = useState(false);
   const [useMasterDetail] = useState(true); // Default to master-detail view
+  const [userMap, setUserMap] = useState<UserMap | null>(null);
 
   // Update URL to reflect current state
   const updateURL = (
@@ -989,7 +990,8 @@ const ChatViewer: React.FC = () => {
     updateURL("view", data.uuid);
   };
 
-  const handleConversationList = (conversations: ChatData[], warning?: string) => {
+  const handleConversationList = (conversations: ChatData[], warning?: string, newUserMap?: UserMap) => {
+    setUserMap(newUserMap ?? null);
     setConversationList(conversations);
 
     if (warning) {
@@ -1514,6 +1516,7 @@ const ChatViewer: React.FC = () => {
                     updateURL("view", conversation.uuid);
                   }}
                   onBack={handleBackToInput}
+                  userMap={userMap ?? undefined}
                 >
                   {chatData && <ConversationView data={chatData} />}
                 </MasterDetailView>
@@ -1524,6 +1527,7 @@ const ChatViewer: React.FC = () => {
               conversations={conversationList}
               onSelectConversation={handleSelectFromBrowser}
               onBack={handleBackToInput}
+              userMap={userMap ?? undefined}
             />
           ) : activeTab === "view" && chatData ? (
             <ConversationView data={chatData} onBack={handleBackToInput} />
