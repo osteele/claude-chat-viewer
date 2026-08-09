@@ -13,7 +13,7 @@ import sampleMath from "../data/sampleConversations/math-tutoring.json";
 // Import sample conversations
 import samplePython from "../data/sampleConversations/python.json";
 import sampleWebDev from "../data/sampleConversations/webdev.json";
-import { type ChatData, ChatDataSchema } from "../schemas/chat";
+import { type ChatData, ChatDataSchema, UserDataSchema, type UserMap } from "../schemas/chat";
 
 type ConversationOption = {
   name: string;
@@ -23,7 +23,7 @@ type ConversationOption = {
 
 interface JsonInputProps {
   onValidJson: (data: ChatData) => void;
-  onConversationList: (conversations: ChatData[], warning?: string) => void;
+  onConversationList: (conversations: ChatData[], warning?: string, userMap?: UserMap) => void;
 }
 
 // Helper function to extract readable error summary from Zod errors
@@ -153,7 +153,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
     }
   };
 
-  const processJsonData = (data: unknown) => {
+  const processJsonData = (data: unknown, userMap?: UserMap) => {
     // Handle array of conversations
     if (Array.isArray(data)) {
       if (data.length === 0) {
@@ -266,7 +266,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
           warningMsg = errorDetails.join("\n");
           console.log("Warning message being sent:", warningMsg);
         }
-        onConversationList(validConversations, warningMsg);
+        onConversationList(validConversations, warningMsg, userMap);
         setError(null);
         setOptions([]);
         return;
@@ -316,7 +316,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
           );
 
           const warningMsg = errorDetails.join("\n");
-          onConversationList(validConversations, warningMsg);
+          onConversationList(validConversations, warningMsg, userMap);
         } else {
           // Only one conversation and it's valid - show it directly
           onValidJson(validConversations[0]);
@@ -594,7 +594,30 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
 
         try {
           const parsedData = JSON.parse(content);
-          processJsonData(parsedData);
+
+          // Build user map from users.json if present (used for name lookup)
+          let userMap: UserMap | undefined;
+          const usersFile = zip.file(/(?:^|\/)users\.json$/)[0] ?? null;
+          if (usersFile) {
+            try {
+              const usersContent = await usersFile.async("string");
+              const usersRaw = JSON.parse(usersContent);
+              if (Array.isArray(usersRaw)) {
+                userMap = new Map();
+                for (const entry of usersRaw) {
+                  const result = UserDataSchema.safeParse(entry);
+                  if (result.success) {
+                    userMap.set(result.data.uuid, result.data);
+                  }
+                }
+                if (userMap.size === 0) userMap = undefined;
+              }
+            } catch {
+              // silently ignore malformed users.json
+            }
+          }
+
+          processJsonData(parsedData, userMap);
         } catch (err) {
           if (err instanceof Error) {
             setError(`Invalid JSON in ZIP file: ${err.message}`);

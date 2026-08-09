@@ -204,6 +204,19 @@ const SettingsSchema = z.object({
   enabled_turmeric: z.boolean().optional(),
 });
 
+// Schema for users.json entries
+export const UserDataSchema = z
+  .object({
+    uuid: z.string(),
+    full_name: z.string(),
+    email_address: z.string().nullable().optional(),
+    verified_phone_number: z.string().nullable().optional(),
+  })
+  .passthrough();
+
+export type UserData = z.infer<typeof UserDataSchema>;
+export type UserMap = Map<string, UserData>; // keyed by account uuid
+
 // Schema for individual conversation exports
 const IndividualChatSchema = z
   .object({

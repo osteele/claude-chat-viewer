@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import fs from "node:fs";
 import path from "node:path";
-import { ChatDataSchema } from "./chat";
+import { ChatDataSchema, UserDataSchema } from "./chat";
 
 describe("ChatDataSchema", () => {
   test("should parse conversation with artifacts format", () => {
@@ -184,5 +184,48 @@ describe("ChatDataSchema", () => {
         expect(lastContent.text).toBe("Some text after");
       }
     }
+  });
+});
+
+describe("UserDataSchema", () => {
+  test("validates a full user entry", () => {
+    const result = UserDataSchema.safeParse({
+      uuid: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+      full_name: "Test User",
+      email_address: "test@example.com",
+      verified_phone_number: "+1234567890",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.full_name).toBe("Test User");
+      expect(result.data.uuid).toBe("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+    }
+  });
+
+  test("validates without optional fields", () => {
+    const result = UserDataSchema.safeParse({
+      uuid: "abc-123",
+      full_name: "Jana Nováková",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  test("fails when full_name is missing", () => {
+    const result = UserDataSchema.safeParse({ uuid: "abc-123" });
+    expect(result.success).toBe(false);
+  });
+
+  test("fails when uuid is missing", () => {
+    const result = UserDataSchema.safeParse({ full_name: "Someone" });
+    expect(result.success).toBe(false);
+  });
+
+  test("passes through unknown fields", () => {
+    const result = UserDataSchema.safeParse({
+      uuid: "abc",
+      full_name: "Test",
+      future_field: "value",
+    });
+    expect(result.success).toBe(true);
   });
 });

@@ -2,19 +2,21 @@ import { Calendar, ChevronLeft, Clock, Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { findSearchMatches, type SearchMatch } from "../lib/searchUtils";
-import type { ChatData } from "../schemas/chat";
-import { sortConversations, type SortField, type SortOrder } from "../utils/sorting";
+import type { ChatData, UserMap } from "../schemas/chat";
+import { type SortField, type SortOrder, sortConversations } from "../utils/sorting";
 
 interface ConversationBrowserProps {
   conversations: ChatData[];
   onSelectConversation: (conversation: ChatData) => void;
   onBack: () => void;
+  userMap?: UserMap;
 }
 
 export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
   conversations,
   onSelectConversation,
   onBack,
+  userMap,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchMode, setSearchMode] = useState<"title" | "full">("full");
@@ -22,6 +24,34 @@ export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [sortField, setSortField] = useState<SortField>("updated_at");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  const [selectedUserUuids, setSelectedUserUuids] = useState<Set<string>>(new Set());
+
+  const toggleUser = (uuid: string) => {
+    setSelectedUserUuids((prev) => {
+      const next = new Set(prev);
+      if (next.has(uuid)) {
+        next.delete(uuid);
+      } else {
+        next.add(uuid);
+      }
+      return next;
+    });
+  };
+
+  const usersWithCounts = useMemo(() => {
+    const countMap = new Map<string, number>();
+    for (const conversation of conversations) {
+      const uuid = (conversation as { account?: { uuid: string } }).account?.uuid;
+      if (uuid) countMap.set(uuid, (countMap.get(uuid) ?? 0) + 1);
+    }
+    if (countMap.size < 2) return [];
+    return Array.from(countMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([uuid, count]) => {
+        const user = userMap?.get(uuid);
+        return { uuid, full_name: user?.full_name ?? `User ${uuid.slice(0, 8)}`, count };
+      });
+  }, [conversations, userMap]);
 
   const formatDate = (dateString: string) => {
     try {
@@ -46,13 +76,20 @@ export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
     // Sort conversations using the selected sort field and order
     const conversationsToFilter = sortConversations(conversations, sortField, sortOrder);
 
+    const userFiltered =
+      selectedUserUuids.size === 0
+        ? conversationsToFilter
+        : conversationsToFilter.filter((c) =>
+            selectedUserUuids.has((c as { account?: { uuid: string } }).account?.uuid ?? ""),
+          );
+
     if (!searchQuery.trim()) {
-      return { filteredConversations: conversationsToFilter, searchMatches: new Map() };
+      return { filteredConversations: userFiltered, searchMatches: new Map() };
     }
 
     const matchesMap = new Map<string, SearchMatch[]>();
 
-    const filtered = conversationsToFilter.filter((conversation) => {
+    const filtered = userFiltered.filter((conversation) => {
       try {
         let searchPattern: RegExp | string;
 
@@ -127,7 +164,16 @@ export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
     });
 
     return { filteredConversations: filtered, searchMatches: matchesMap };
-  }, [conversations, searchQuery, searchMode, useRegex, caseSensitive, sortField, sortOrder]);
+  }, [
+    conversations,
+    searchQuery,
+    searchMode,
+    useRegex,
+    caseSensitive,
+    sortField,
+    sortOrder,
+    selectedUserUuids,
+  ]);
 
   return (
     <div className="max-w-6xl mx-auto p-6">
@@ -288,6 +334,40 @@ export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
           </label>
         </div>
       </div>
+
+      {usersWithCounts.length >= 2 && (
+        <div className="mb-6 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-700">Filter by user:</span>
+            {selectedUserUuids.size > 0 && (
+              <button
+                type="button"
+                onClick={() => setSelectedUserUuids(new Set())}
+                className="text-xs text-blue-600 hover:text-blue-800"
+              >
+                Clear filter
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {usersWithCounts.map((user) => (
+              <button
+                key={user.uuid}
+                type="button"
+                onClick={() => toggleUser(user.uuid)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm border transition-colors ${
+                  selectedUserUuids.has(user.uuid)
+                    ? "bg-blue-100 border-blue-300 text-blue-800"
+                    : "bg-white border-gray-200 text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                {user.full_name}
+                <span className="text-xs opacity-60">{user.count}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-4">
         {filteredConversations.length === 0 ? (
