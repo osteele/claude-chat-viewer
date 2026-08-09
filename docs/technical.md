@@ -7,7 +7,9 @@ The Claude Chat Viewer is a React application that renders Claude chat conversat
 ```mermaid
 graph TD
 A[JSON Input] --> B[ChatViewer]
-B --> C[ConversationView]
+B --> V[Import validation]
+V -->|Large export| W[Web Worker]
+V --> C[ConversationView]
 C --> D[MessageCard]
 D --> E[Content Renderer]
 E --> F[Text/Markdown]
@@ -34,6 +36,12 @@ E --> I[Thinking Process]
 - Supports human and Claude messages with different styling
 - Processes message content through specialized renderers
 - Handles file attachments and artifacts
+
+### Import and Search Processing
+- `conversationImport.ts` validates individual and bulk exports and produces typed UI outcomes.
+- Exports larger than 1 MB are parsed and validated in a Web Worker so the input UI stays responsive.
+- Conversation search builds one text index per export and defers query work while the user types.
+- Both browsing layouts use the same search implementation.
 
 ## Message Processing Pipeline
 
@@ -110,7 +118,7 @@ The `parseMessage` function splits messages into segments:
 - Implement LaTeX rendering
 - Add support for interactive run artifacts
 - Enhance print layout options
-- Add message search functionality
+- Add fuzzy-search ranking
 - Implement conversation export options
 - Support advanced schema features (projects, workspaces, message threading)
 

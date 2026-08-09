@@ -13,7 +13,8 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import type { ZodInvalidUnionIssue, ZodIssue } from "zod";
+import type { ZodIssue } from "zod";
+import { formatZodIssues } from "../src/lib/conversationImport";
 import { ChatDataSchema } from "../src/schemas/chat";
 
 // ANSI color codes
@@ -82,27 +83,10 @@ function validateFile(filePath: string) {
           invalidCount++;
           const name = conv?.name || `Conversation ${index + 1}`;
 
-          // Get the first few errors for this conversation
-          const firstErrors = result.error.errors.slice(0, 3);
-
-          // Check for union errors to get more specific information
-          const unionError = result.error.errors.find(
-            (e): e is ZodInvalidUnionIssue => e.code === "invalid_union",
-          );
-          let specificErrors: ZodIssue[] = firstErrors as ZodIssue[];
-
-          if (unionError?.unionErrors && unionError.unionErrors.length > 0) {
-            // Get the most relevant error from union attempts
-            const relevantUnion = unionError.unionErrors[unionError.unionErrors.length - 1];
-            if (relevantUnion.errors && relevantUnion.errors.length > 0) {
-              specificErrors = relevantUnion.errors.slice(0, 3);
-            }
-          }
-
           errors.push({
             index,
             name,
-            errors: specificErrors,
+            errors: result.error.issues.slice(0, 3),
           });
         }
       });
@@ -165,29 +149,9 @@ function validateFile(filePath: string) {
         console.log();
         console.log(`${colors.yellow}Validation errors:${colors.reset}`);
 
-        // Get specific errors
-        const errors = result.error.errors as ZodIssue[];
-        const unionError = errors.find(
-          (e): e is ZodInvalidUnionIssue => e.code === "invalid_union",
-        );
-
-        if (unionError?.unionErrors) {
-          // Show the most specific error from union attempts
-          unionError.unionErrors.forEach((ue, i: number) => {
-            if (ue.errors && ue.errors.length > 0) {
-              console.log();
-              console.log(`${colors.gray}Schema attempt ${i + 1}:${colors.reset}`);
-              ue.errors.slice(0, 3).forEach((e) => {
-                console.log(formatError(e));
-              });
-            }
-          });
-        } else {
-          // Show regular errors
-          errors.slice(0, 10).forEach((e) => {
-            console.log(formatError(e));
-          });
-        }
+        formatZodIssues(result.error.issues).forEach((line) => {
+          console.log(line);
+        });
 
         process.exit(1);
       }

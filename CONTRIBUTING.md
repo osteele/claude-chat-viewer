@@ -27,7 +27,16 @@ bun install
 bun dev
 ```
 
-The application will be available at http://localhost:5173
+The application will be available at http://localhost:5173.
+
+Before submitting a change, run:
+
+```bash
+bun install --frozen-lockfile
+bun run check
+bun test
+bun run build
+```
 
 ## Project Structure
 
@@ -42,20 +51,17 @@ claude-chat-viewer/
 │   │   ├── ChatViewer.tsx  # Main viewer component
 │   │   ├── CodeBlock.tsx   # Code block rendering
 │   │   └── JsonInput.tsx   # JSON input handling
-│   ├── content/
-│   │   └── instructions.mdx # User instructions
+│   ├── hooks/               # Shared React behavior
 │   ├── lib/
+│   │   ├── conversationImport.ts # Import validation and diagnostics
 │   │   ├── messageParser.ts # Message parsing logic
+│   │   ├── searchUtils.ts   # Indexed conversation search
 │   │   └── utils.ts        # Utility functions
 │   ├── schemas/
 │   │   └── chat.ts         # Chat data type definitions
-│   ├── types/
-│   │   ├── mdx.d.ts        # MDX type definitions
-│   │   └── types.ts        # Global type definitions
+│   ├── workers/             # Large-export background processing
 │   ├── App.tsx             # Root application component
 │   └── main.tsx           # Application entry point
-├── styles/
-│   └── chat.css           # Global styles
 ├── CONTRIBUTING.md         # Contributor guidelines
 ├── README.md              # Project overview
 ├── package.json           # Project dependencies
@@ -70,16 +76,16 @@ claude-chat-viewer/
 - `src/components/` - React components, organized by feature
 - `src/lib/` - Shared utilities and business logic
 - `src/schemas/` - TypeScript types and validation schemas
-- `src/content/` - Static content and instructions
-- `src/types/` - TypeScript type definitions
-- `styles/` - Global CSS and Tailwind utilities
+- `src/hooks/` - Shared React state and derived behavior
+- `src/workers/` - Background processing for large exports
 
 ## Development Commands
 
 - `bun dev` - Start development server
 - `bun build` - Build for production
 - `bun preview` - Preview production build
-- `bun test` - Run tests (when implemented)
+- `bun test` - Run tests
+- `bun run check` - Run formatting, lint, and type checks
 
 ## Technical Dependencies
 

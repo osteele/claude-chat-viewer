@@ -107,7 +107,7 @@ function showConversation(conv: ChatData, index: number) {
       `  ${colors.gray}[${msgIndex}]${colors.reset} ${sender} ${colors.gray}(${contentCount} content items)${colors.reset}`,
     );
     console.log(
-      `      ${colors.gray}"${preview}${msg.text?.length > 60 ? "..." : ""}"${colors.reset}`,
+      `      ${colors.gray}"${preview}${(msg.text?.length ?? 0) > 60 ? "..." : ""}"${colors.reset}`,
     );
   });
 
@@ -129,7 +129,7 @@ function showMessage(msg: ChatMessage, convIndex: number, msgIndex: number) {
 
   console.log(`\n${colors.cyan}Text:${colors.reset}`);
   console.log(
-    `  ${colors.gray}${msg.text?.substring(0, 200)}${msg.text?.length > 200 ? "..." : ""}${colors.reset}`,
+    `  ${colors.gray}${msg.text?.substring(0, 200)}${(msg.text?.length ?? 0) > 200 ? "..." : ""}${colors.reset}`,
   );
 
   console.log(`\n${colors.cyan}Content items (${msg.content?.length || 0}):${colors.reset}`);
@@ -188,8 +188,8 @@ function showContentItem(
   // Show specific details based on type
   if (item.type === "thinking" && item.summaries) {
     console.log(`\n${colors.cyan}Summaries (${item.summaries.length}):${colors.reset}`);
-    item.summaries.forEach((s: unknown, i: number) => {
-      console.log(`  ${i + 1}. ${s.summary || s}`);
+    item.summaries.forEach((summary, i: number) => {
+      console.log(`  ${i + 1}. ${summary.summary}`);
     });
   }
 

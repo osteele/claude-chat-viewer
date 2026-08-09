@@ -117,74 +117,85 @@ interface LineMap {
 }
 
 function buildLineMap(json: string): LineMap {
-  const lines = json.split("\n");
   const lineMap: LineMap = {};
-  const currentPath: string[] = [];
-  const arrayIndices: { [key: string]: number } = {};
+  let position = 0;
+  let line = 1;
 
-  for (let lineNum = 0; lineNum < lines.length; lineNum++) {
-    const line = lines[lineNum];
-    const trimmedLine = line.trim();
+  const skipWhitespace = () => {
+    while (/\s/.test(json[position] ?? "")) {
+      if (json[position] === "\n") line++;
+      position++;
+    }
+  };
 
-    // Handle array elements
-    if (trimmedLine === "{") {
-      const currentPathStr = currentPath.join(".");
-      if (arrayIndices[currentPathStr] !== undefined) {
-        arrayIndices[currentPathStr]++;
-        // Store the line number for the array element itself
-        const arrayPath = [...currentPath, arrayIndices[currentPathStr].toString()].join(".");
-        lineMap[arrayPath] = lineNum + 1;
+  const parseString = (): string => {
+    const start = position;
+    position++;
+    while (position < json.length) {
+      if (json[position] === "\\") {
+        position += 2;
+      } else if (json[position] === '"') {
+        position++;
+        return JSON.parse(json.slice(start, position)) as string;
+      } else {
+        if (json[position] === "\n") line++;
+        position++;
       }
     }
+    return "";
+  };
 
-    // Handle property names
-    const propertyMatch = trimmedLine.match(/^"([^"]+)"\s*:/);
-    if (propertyMatch) {
-      const key = propertyMatch[1];
-      const currentPathStr = currentPath.join(".");
-      const arrayIndex = arrayIndices[currentPathStr];
+  const parseValue = (path: string[]): void => {
+    skipWhitespace();
+    const valueLine = line;
+    if (path.length > 0 && !lineMap[path.join(".")]) lineMap[path.join(".")] = valueLine;
 
-      // Build the full path including array indices
-      const pathParts = [...currentPath];
-      if (arrayIndex !== undefined) {
-        pathParts.push(arrayIndex.toString());
-      }
-      pathParts.push(key);
-      const fullPath = pathParts.join(".");
-
-      // Store the line number for this property
-      lineMap[fullPath] = lineNum + 1;
-
-      // Look ahead for nested structures
-      const valueMatch = line.match(/:\s*(.+)$/);
-      if (valueMatch) {
-        const value = valueMatch[1].trim();
-        if (value === "[") {
-          currentPath.push(key);
-          arrayIndices[currentPath.join(".")] = -1;
-        } else if (value === "{") {
-          currentPath.push(key);
+    if (json[position] === "{") {
+      position++;
+      skipWhitespace();
+      while (position < json.length && json[position] !== "}") {
+        const keyLine = line;
+        const key = parseString();
+        const propertyPath = [...path, key];
+        lineMap[propertyPath.join(".")] = keyLine;
+        skipWhitespace();
+        if (json[position] === ":") position++;
+        parseValue(propertyPath);
+        skipWhitespace();
+        if (json[position] === ",") {
+          position++;
+          skipWhitespace();
         }
       }
+      if (json[position] === "}") position++;
+      return;
+    }
 
-      // Store line numbers for all parent paths
-      let parentPath = "";
-      for (const part of pathParts) {
-        parentPath = parentPath ? `${parentPath}.${part}` : part;
-        if (!lineMap[parentPath]) {
-          lineMap[parentPath] = lineNum + 1;
+    if (json[position] === "[") {
+      position++;
+      skipWhitespace();
+      let index = 0;
+      while (position < json.length && json[position] !== "]") {
+        parseValue([...path, String(index)]);
+        index++;
+        skipWhitespace();
+        if (json[position] === ",") {
+          position++;
+          skipWhitespace();
         }
       }
+      if (json[position] === "]") position++;
+      return;
     }
 
-    // Handle closing brackets
-    if (trimmedLine === "}" || trimmedLine === "},") {
-      currentPath.pop();
-    } else if (trimmedLine === "]" || trimmedLine === "],") {
-      delete arrayIndices[currentPath.join(".")];
-      currentPath.pop();
+    if (json[position] === '"') {
+      parseString();
+      return;
     }
-  }
+    while (position < json.length && !/[\s,}\]]/.test(json[position])) position++;
+  };
+
+  parseValue([]);
 
   return lineMap;
 }

@@ -1,9 +1,9 @@
 # Claude Chat Viewer
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/React-18.2-61dafb)](https://reactjs.org/)
-[![Vite](https://img.shields.io/badge/Vite-4.4-646cff)](https://vitejs.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-7-blue)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-19-61dafb)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-8-646cff)](https://vite.dev/)
 [![Bun](https://img.shields.io/badge/Bun-Package%20Manager-000000)](https://bun.sh/)
 
 A web application for viewing Claude chat conversations from exported JSON files. Renders Claude's chat JSON exports in a clean, readable format with support for code blocks, artifacts, and thinking process sections.
@@ -30,7 +30,7 @@ A web application for viewing Claude chat conversations from exported JSON files
 - Display Claude's thinking process (optional)
 - Print-friendly layout
 - Responsive design
-- Persistent storage of last viewed conversation
+- Background processing for large conversation exports
 
 ## Privacy
 

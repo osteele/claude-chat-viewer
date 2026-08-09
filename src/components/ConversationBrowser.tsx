@@ -1,9 +1,11 @@
 import { Calendar, ChevronLeft, Clock, Search, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { findSearchMatches, type SearchMatch } from "../lib/searchUtils";
+import { useConversationSearch } from "../hooks/useConversationSearch";
+import type { SearchMatch } from "../lib/searchUtils";
 import type { ChatData } from "../schemas/chat";
-import { type SortField, type SortOrder, sortConversations } from "../utils/sorting";
+import type { SortField, SortOrder } from "../utils/sorting";
+import { SearchHighlight } from "./SearchHighlight";
 
 interface ConversationBrowserProps {
   conversations: ChatData[];
@@ -41,93 +43,15 @@ export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
     onSelectConversation(conversation);
   };
 
-  // Filter conversations and get search matches
-  const { filteredConversations, searchMatches } = useMemo(() => {
-    // Sort conversations using the selected sort field and order
-    const conversationsToFilter = sortConversations(conversations, sortField, sortOrder);
-
-    if (!searchQuery.trim()) {
-      return { filteredConversations: conversationsToFilter, searchMatches: new Map() };
-    }
-
-    const matchesMap = new Map<string, SearchMatch[]>();
-
-    const filtered = conversationsToFilter.filter((conversation) => {
-      try {
-        let searchPattern: RegExp | string;
-
-        if (useRegex) {
-          // Use regex search
-          searchPattern = new RegExp(searchQuery, caseSensitive ? "" : "i");
-        } else {
-          // Use plain text search
-          searchPattern = caseSensitive ? searchQuery : searchQuery.toLowerCase();
-        }
-
-        if (searchMode === "title") {
-          // Search only in title and summary
-          const title = conversation.name || "Untitled Conversation";
-          const summary = conversation.summary || "";
-          const searchText = `${title} ${summary}`;
-
-          if (useRegex) {
-            return (searchPattern as RegExp).test(searchText);
-          }
-          const normalizedText = caseSensitive ? searchText : searchText.toLowerCase();
-          return normalizedText.includes(searchPattern as string);
-        }
-        // Search in full conversation text
-        const title = conversation.name || "Untitled Conversation";
-        const summary = conversation.summary || "";
-
-        // Build full text from all messages
-        const messagesText = conversation.chat_messages
-          .map((msg) => {
-            // Extract text from content items
-            return msg.content
-              .map((item) => {
-                if (item.type === "text") {
-                  return item.text;
-                }
-                return "";
-              })
-              .join(" ");
-          })
-          .join(" ");
-
-        const fullText = `${title} ${summary} ${messagesText}`;
-
-        if (useRegex) {
-          const hasMatch = (searchPattern as RegExp).test(fullText);
-          if (hasMatch) {
-            const matches = findSearchMatches(conversation, searchQuery, useRegex, caseSensitive);
-            if (matches.length > 0) {
-              matchesMap.set(conversation.uuid, matches);
-            }
-          }
-          return hasMatch;
-        }
-        const normalizedText = caseSensitive ? fullText : fullText.toLowerCase();
-        const hasMatch = normalizedText.includes(searchPattern as string);
-        if (hasMatch) {
-          const matches = findSearchMatches(conversation, searchQuery, useRegex, caseSensitive);
-          if (matches.length > 0) {
-            matchesMap.set(conversation.uuid, matches);
-          }
-        }
-        return hasMatch;
-      } catch (error) {
-        // Handle invalid regex
-        if (useRegex) {
-          console.error("Invalid regex pattern:", error);
-          return false;
-        }
-        return false;
-      }
+  const { filteredConversations, searchMatches, searchError, isSearchPending } =
+    useConversationSearch(conversations, {
+      searchQuery,
+      searchMode,
+      useRegex,
+      caseSensitive,
+      sortField,
+      sortOrder,
     });
-
-    return { filteredConversations: filtered, searchMatches: matchesMap };
-  }, [conversations, searchQuery, searchMode, useRegex, caseSensitive, sortField, sortOrder]);
 
   return (
     <div className="max-w-6xl mx-auto p-6">
@@ -151,6 +75,8 @@ export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={useRegex ? "Enter regex pattern..." : "Search conversations..."}
+            aria-invalid={searchError ? true : undefined}
+            aria-busy={isSearchPending}
             className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
           {searchQuery && (
@@ -164,6 +90,7 @@ export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
             </button>
           )}
         </div>
+        {searchError && <p className="text-sm text-red-600">Invalid regex: {searchError}</p>}
 
         <div className="flex flex-wrap gap-4 items-center">
           {/* Search Mode */}
@@ -217,22 +144,6 @@ export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
             </label>
           </div>
         </div>
-
-        {/* Show regex error if pattern is invalid */}
-        {useRegex &&
-          searchQuery &&
-          (() => {
-            try {
-              new RegExp(searchQuery);
-              return null;
-            } catch (e) {
-              return (
-                <div className="text-sm text-red-600">
-                  Invalid regex pattern: {e instanceof Error ? e.message : "Unknown error"}
-                </div>
-              );
-            }
-          })()}
       </div>
 
       {/* Sort Controls */}
@@ -300,17 +211,28 @@ export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
             <button
               key={conversation.uuid}
               type="button"
+              style={{ contentVisibility: "auto", containIntrinsicSize: "auto 140px" }}
               className="text-left bg-white border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-sm transition-colors cursor-pointer"
               onClick={() => handleSelectConversation(conversation)}
             >
               <div className="flex justify-between items-start gap-4">
                 <div className="flex-1 min-w-0">
                   <h3 className="font-medium text-gray-900 truncate">
-                    {conversation.name || "Untitled Conversation"}
+                    <SearchHighlight
+                      text={conversation.name || "Untitled Conversation"}
+                      query={searchQuery}
+                      useRegex={useRegex}
+                      caseSensitive={caseSensitive}
+                    />
                   </h3>
                   {conversation.summary && (
                     <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                      {conversation.summary}
+                      <SearchHighlight
+                        text={conversation.summary}
+                        query={searchQuery}
+                        useRegex={useRegex}
+                        caseSensitive={caseSensitive}
+                      />
                     </p>
                   )}
 
@@ -335,9 +257,10 @@ export const ConversationBrowser: React.FC<ConversationBrowserProps> = ({
                             </div>
                           </div>
                         ))}
-                      {searchMatches.get(conversation.uuid)?.length > 2 && (
+                      {(searchMatches.get(conversation.uuid)?.length ?? 0) > 2 && (
                         <div className="text-xs text-gray-500 italic">
-                          ...and {searchMatches.get(conversation.uuid)?.length - 2} more matches
+                          ...and {(searchMatches.get(conversation.uuid)?.length ?? 0) - 2} more
+                          matches
                         </div>
                       )}
                     </div>

@@ -24,7 +24,7 @@ const ToolUseSchema = z.object({
       language: z.string().nullable().optional(),
       version_uuid: z.string().optional(),
       source: z.string().optional(),
-      md_citations: z.array(z.any()).optional(),
+      md_citations: z.array(z.unknown()).optional(),
     })
     .passthrough(),
   start_timestamp: z.string().nullable().optional(),
@@ -32,9 +32,9 @@ const ToolUseSchema = z.object({
   message: z.string().nullable().optional(),
   integration_name: z.string().nullable().optional(),
   integration_icon_url: z.string().nullable().optional(),
-  context: z.any().nullable().optional(),
-  display_content: z.any().nullable().optional(),
-  approval_options: z.any().nullable().optional(),
+  context: z.unknown().nullable().optional(),
+  display_content: z.unknown().nullable().optional(),
+  approval_options: z.unknown().nullable().optional(),
   approval_key: z.string().nullable().optional(),
 });
 
@@ -56,8 +56,14 @@ const ToolResultSchema = z.object({
   message: z.string().nullable().optional(),
   integration_name: z.string().nullable().optional(),
   integration_icon_url: z.string().nullable().optional(),
-  display_content: z.any().nullable().optional(),
+  display_content: z.unknown().nullable().optional(),
 });
+
+const ThinkingSummarySchema = z
+  .object({
+    summary: z.string(),
+  })
+  .passthrough();
 
 // Known content types that we explicitly handle
 const KnownContentTypes = ["text", "thinking", "voice_note", "tool_use", "tool_result"] as const;
@@ -70,7 +76,7 @@ const KnownContentItemSchema = z.union([
       text: z.string(),
       start_timestamp: z.string().nullable().optional(),
       stop_timestamp: z.string().nullable().optional(),
-      citations: z.array(z.any()).optional(),
+      citations: z.array(z.unknown()).optional(),
     })
     .passthrough(),
   z
@@ -79,7 +85,7 @@ const KnownContentItemSchema = z.union([
       thinking: z.string(),
       start_timestamp: z.string().nullable().optional(),
       stop_timestamp: z.string().nullable().optional(),
-      summaries: z.array(z.any()).optional(),
+      summaries: z.array(ThinkingSummarySchema).optional(),
       cut_off: z.boolean().optional(),
     })
     .passthrough(),
@@ -162,10 +168,7 @@ const ChatMessageSchema = z
     index: z.number().default(0).describe("Message index in conversation"), // Default to 0 if not present
     sender: z.enum(["human", "assistant"]).describe("Message sender"),
     content: z
-      .array(ContentItemSchema, {
-        required_error: "Message content is required",
-        invalid_type_error: "Message content must be an array",
-      })
+      .array(ContentItemSchema, { error: "Message content must be an array" })
       .describe("Message content items"),
     text: z.string().optional().describe("Message text"), // Made optional for newer export formats
     created_at: z.string().describe("Creation timestamp"),
@@ -174,7 +177,7 @@ const ChatMessageSchema = z
     attachments: z.array(AttachmentSchema).optional(),
     files: z.array(FileSchema).optional(),
     files_v2: z.array(FileSchema).optional(),
-    sync_sources: z.array(z.any()).optional(),
+    sync_sources: z.array(z.unknown()).optional(),
     parent_message_uuid: z.string().optional(),
   })
   .passthrough(); // Allow additional fields from newer export formats
@@ -188,8 +191,8 @@ const ConversationMessageSchema = z
     sender: z.enum(["human", "assistant"]),
     created_at: z.string(),
     updated_at: z.string(),
-    attachments: z.array(z.any()).optional(),
-    files: z.array(z.any()).optional(),
+    attachments: z.array(AttachmentSchema).optional(),
+    files: z.array(FileSchema).optional(),
     index: z.number().default(0), // Default to 0 if not present
     truncated: z.boolean().default(false),
     parent_message_uuid: z.string().optional(),
@@ -207,22 +210,21 @@ const SettingsSchema = z.object({
 // Schema for individual conversation exports
 const IndividualChatSchema = z
   .object({
-    uuid: z.string({ required_error: "Conversation UUID is required" }),
-    name: z.string({ required_error: "Conversation name is required" }),
+    uuid: z.string({ error: "Conversation UUID is required" }),
+    name: z.string({ error: "Conversation name is required" }),
     summary: z.string().optional(),
-    created_at: z.string({ required_error: "Creation date is required" }),
-    updated_at: z.string({ required_error: "Update date is required" }),
+    created_at: z.string({ error: "Creation date is required" }),
+    updated_at: z.string({ error: "Update date is required" }),
     settings: SettingsSchema.optional(),
     is_starred: z.boolean().default(false),
     current_leaf_message_uuid: z.string().optional(),
     chat_messages: z.array(ChatMessageSchema, {
-      required_error: "chat_messages array is required",
-      invalid_type_error: "chat_messages must be an array of messages",
+      error: "chat_messages must be an array of messages",
     }),
     conversation_id: z.string().optional(),
     model: z.string().optional(),
     project_uuid: z.string().optional(),
-    project: z.any().optional(),
+    project: z.unknown().optional(),
     workspace_id: z.string().optional(),
   })
   .passthrough(); // Allow additional fields
@@ -249,7 +251,7 @@ const ConversationItemSchema = z
     conversation_id: z.string().optional(),
     model: z.string().optional(),
     project_uuid: z.string().optional(),
-    project: z.any().optional(),
+    project: z.unknown().optional(),
     workspace_id: z.string().optional(),
   })
   .passthrough(); // Allow additional fields

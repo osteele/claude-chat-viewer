@@ -3,9 +3,12 @@ import { X } from "lucide-react";
 import mime from "mime";
 import { lazy, Suspense, useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import { createToolArtifactKey } from "../lib/artifactIdentity";
+import { condenseImportWarning } from "../lib/conversationImport";
+import { importConversationText } from "../lib/conversationImportClient";
 import { parseMessage } from "../lib/messageParser";
 import { chatToHtml, chatToMarkdown, chatToText } from "../lib/utils";
-import { type ChatData, ChatDataSchema, type ChatMessage } from "../schemas/chat";
+import type { ChatData, ChatMessage } from "../schemas/chat";
 import { Artifact } from "./Artifact";
 import { ConversationBrowser } from "./ConversationBrowser";
 import { JsonInput } from "./JsonInput";
@@ -31,8 +34,12 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking, artifa
     }
     return content.map((item, index) => {
       if (item.type === "tool_use" && item.name === "artifacts") {
-        const id = item.input.id || item.input.identifier || `${Date.now()}`;
-        const key = `${message.uuid}-tool-${id}`;
+        const key = createToolArtifactKey(
+          message.uuid,
+          item.input.id,
+          item.input.identifier,
+          index,
+        );
         const artifactNum = artifactNumberMap.get(key) || 0;
         return (
           <div key={key} className="ml-4 inline-block">
@@ -184,10 +191,11 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking, artifa
       {message.attachments && message.attachments.length > 0 && (
         <div className="mb-4 flex flex-wrap gap-2">
           {message.attachments.map((attachment) => {
-            const [baseName, extension] = attachment.file_name.split(/\.(?=[^.]+$)/);
+            const fileName = attachment.file_name ?? "attachment";
+            const [baseName, extension] = fileName.split(/\.(?=[^.]+$)/);
             return (
               <div
-                key={`${attachment.file_name}-${attachment.created_at}`}
+                key={attachment.id ?? `${fileName}-${attachment.created_at ?? "unknown"}`}
                 className="px-3 py-8 bg-gradient-to-b from-[#fdfdfb] to-[#e6f5fc] border border-[#e8e7df] rounded-lg"
               >
                 <div className="flex flex-col items-center gap-5">
@@ -499,10 +507,14 @@ const ConversationView: React.FC<{ data: ChatData; onBack?: () => void }> = ({ d
   });
 
   sortedMessages.forEach((message) => {
-    message.content.forEach((item) => {
+    message.content.forEach((item, itemIndex) => {
       if (item.type === "tool_use" && item.name === "artifacts") {
-        const id = item.input.id || item.input.identifier || `${Date.now()}`;
-        const key = `${message.uuid}-tool-${id}`;
+        const key = createToolArtifactKey(
+          message.uuid,
+          item.input.id,
+          item.input.identifier,
+          itemIndex,
+        );
         if (!artifactNumberMap.has(key)) {
           artifacts.push({
             title: item.input.title || "Untitled",
@@ -996,74 +1008,10 @@ const ChatViewer: React.FC = () => {
     setConversationList(conversations);
 
     if (warning) {
-      // Store full details for copying
       setFullErrorDetails(warning);
-
-      // Create a condensed version for UI display
-      const lines = warning.split("\n");
-      const condensedLines: string[] = [];
-
-      // Find and add the summary line (first line that starts with ❌)
-      const summaryLine = lines.find((line) => line.startsWith("❌"));
-      if (summaryLine) {
-        condensedLines.push(summaryLine);
-      }
-
-      // Find and add error count line (if different from summary)
-      const errorCountLine = lines.find(
-        (line) => line.includes("conversation(s) had validation errors") && line !== summaryLine,
-      );
-      if (errorCountLine) {
-        condensedLines.push(errorCountLine);
-      }
-
-      // Include first error details only
-      let foundFirstError = false;
-      let errorLineCount = 0;
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        if (line.startsWith("• ")) {
-          if (!foundFirstError) {
-            foundFirstError = true;
-            condensedLines.push(""); // Add blank line before error details
-            condensedLines.push(line);
-            // Include next 2 lines of error details
-            for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
-              if (lines[j].includes('At "')) {
-                condensedLines.push(lines[j]);
-                errorLineCount++;
-                if (errorLineCount >= 2) break;
-              }
-            }
-          }
-          break;
-        }
-      }
-
-      // Check if there are more errors beyond the first
-      let errorCount = 0;
-      lines.forEach((line) => {
-        if (line.startsWith("• ")) errorCount++;
-      });
-
-      if (errorCount > 1) {
-        condensedLines.push("\n[More errors hidden - click Copy Error for full details]");
-      }
-
-      // Always include the bug report section
-      const bugReportIndex = lines.findIndex((line) => line.includes("🐛 Unexpected error?"));
-      if (bugReportIndex !== -1) {
-        condensedLines.push("");
-        for (let i = bugReportIndex; i < Math.min(bugReportIndex + 4, lines.length); i++) {
-          if (lines[i]) condensedLines.push(lines[i]);
-        }
-      }
-
-      setLoadWarning(condensedLines.join("\n"));
-      console.log("Warning received in ChatViewer:", warning);
+      setLoadWarning(condenseImportWarning(warning));
     } else {
       setLoadWarning(null);
-      setFullErrorDetails(null);
       setFullErrorDetails(null);
     }
     setChatData(null);
@@ -1166,90 +1114,31 @@ const ChatViewer: React.FC = () => {
               `Failed to load file "${fileParam}": ${response.status} ${response.statusText}. Make sure the file path is correct and the file is accessible.`,
             );
           }
-          return response.json();
+          return response.text();
         })
-        .then((data) => {
-          // Don't cache query parameter data to avoid storage issues with large files
-
-          // Check if it's a conversations.json file (array format)
-          if (Array.isArray(data)) {
-            if (data.length === 0) {
-              setLoadError("The conversations file is empty.");
-              return;
-            }
-
-            if (data.length === 1) {
-              // Single conversation in array - load it directly
-              setChatData(data[0]);
-              setActiveTab("view");
-              return;
-            }
-
-            // Multiple conversations - validate each as ChatData and show browser
-            const validConversations: ChatData[] = [];
-            const invalidConversations: { index: number; error: string }[] = [];
-
-            data.forEach((conversation, index) => {
-              const result = ChatDataSchema.safeParse(conversation);
-              if (result.success) {
-                validConversations.push(result.data);
-              } else {
-                const errorMessage = result.error.errors
-                  .map((e) => `${e.path.join(".")}: ${e.message}`)
-                  .join("; ");
-                invalidConversations.push({ index, error: errorMessage });
-                console.error(`Conversation ${index + 1} validation failed:`, result.error.errors);
-              }
-            });
-
-            if (validConversations.length === 0) {
-              setLoadError("No valid conversations found in the file. Check console for details.");
-              return;
-            }
-
-            if (invalidConversations.length > 0) {
-              console.warn(
-                `Loaded ${validConversations.length} of ${data.length} conversations. ${invalidConversations.length} had errors.`,
-              );
-            }
-
-            // Show conversation browser with valid conversations
-            setConversationList(validConversations);
-
-            // Check if we should navigate to a specific conversation
-            if (tabParam === "view" && conversationParam) {
-              const conversation = validConversations.find((c) => c.uuid === conversationParam);
-              if (conversation) {
-                setChatData(conversation);
-                if (useMasterDetail) {
-                  setActiveTab("master-detail");
-                } else {
-                  setActiveTab("view");
-                }
-              } else if (useMasterDetail) {
-                setActiveTab("master-detail");
-                // Select first conversation by default
-                if (validConversations.length > 0) {
-                  setChatData(validConversations[0]);
-                }
-              } else {
-                setActiveTab("browse");
-              }
-            } else if (useMasterDetail) {
-              setActiveTab("master-detail");
-              // Select first conversation by default
-              if (validConversations.length > 0) {
-                setChatData(validConversations[0]);
-              }
-            } else {
-              setActiveTab("browse");
-            }
+        .then(async (text) => {
+          const result = await importConversationText(text);
+          if (result.kind === "error") {
+            setLoadError(result.message);
+            return;
+          }
+          if (result.kind === "conversation") {
+            setChatData(result.conversation);
+            setActiveTab("view");
             return;
           }
 
-          // Single conversation object
-          setChatData(data);
-          setActiveTab("view");
+          setConversationList(result.conversations);
+          if (result.warning) {
+            setFullErrorDetails(result.warning);
+            setLoadWarning(condenseImportWarning(result.warning));
+          }
+          const selected =
+            tabParam === "view" && conversationParam
+              ? result.conversations.find((conversation) => conversation.uuid === conversationParam)
+              : undefined;
+          setChatData(selected ?? result.conversations[0] ?? null);
+          setActiveTab(useMasterDetail ? "master-detail" : selected ? "view" : "browse");
         })
         .catch((error) => {
           console.error("Error loading file:", error);

@@ -1,7 +1,7 @@
-import { describe, expect, it } from "bun:test";
-// import { render, screen, fireEvent } from "@testing-library/react";
-// import { ConversationBrowser } from "./ConversationBrowser";
+import { describe, expect, it, mock } from "bun:test";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { ChatData } from "../schemas/chat";
+import { ConversationBrowser } from "./ConversationBrowser";
 
 // Mock data
 const mockConversations: ChatData[] = [
@@ -56,9 +56,28 @@ const mockConversations: ChatData[] = [
 ];
 
 describe("ConversationBrowser", () => {
-  it.skip("should render conversation list with correct count", () => {
-    // TODO: Set up React Testing Library
-    expect(true).toBe(true);
+  it("renders, filters, and selects conversations", () => {
+    const onSelectConversation = mock(() => undefined);
+    render(
+      <ConversationBrowser
+        conversations={mockConversations}
+        onSelectConversation={onSelectConversation}
+        onBack={() => undefined}
+      />,
+    );
+
+    expect(screen.getByText("First Conversation")).toBeTruthy();
+    expect(screen.getByText("Second Conversation")).toBeTruthy();
+
+    fireEvent.change(screen.getByPlaceholderText("Search conversations..."), {
+      target: { value: "Second" },
+    });
+
+    expect(screen.queryByText("First Conversation")).toBeNull();
+    expect(screen.getByText("Second", { selector: "mark" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Second Conversation/ }));
+    expect(onSelectConversation).toHaveBeenCalledTimes(1);
+    expect(onSelectConversation).toHaveBeenCalledWith(mockConversations[1]);
   });
 
   it("should validate conversation data structure", () => {

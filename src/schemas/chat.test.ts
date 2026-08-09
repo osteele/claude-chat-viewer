@@ -12,7 +12,7 @@ describe("ChatDataSchema", () => {
     const result = ChatDataSchema.safeParse(data);
 
     if (!result.success) {
-      console.error("Validation errors:", result.error.errors);
+      console.error("Validation errors:", result.error.issues);
     }
 
     expect(result.success).toBe(true);
@@ -91,7 +91,7 @@ describe("ChatDataSchema", () => {
     const result = ChatDataSchema.safeParse(testConversation);
 
     if (!result.success) {
-      console.error("Validation errors:", result.error.errors);
+      console.error("Validation errors:", result.error.issues);
     }
 
     expect(result.success).toBe(true);

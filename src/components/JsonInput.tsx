@@ -1,91 +1,23 @@
 import { AlertCircle, Archive, CheckCircle, Clipboard, FileJson, Upload } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ZodInvalidUnionIssue, ZodIssue, z } from "zod";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import sampleBusiness from "../data/sampleConversations/business-strategy.json";
-import sampleCooking from "../data/sampleConversations/cooking.json";
-import sampleCreativeWriting from "../data/sampleConversations/creative-writing.json";
-import sampleData from "../data/sampleConversations/data.json";
-import sampleHistory from "../data/sampleConversations/history.json";
-import sampleMath from "../data/sampleConversations/math-tutoring.json";
-// Import sample conversations
-import samplePython from "../data/sampleConversations/python.json";
-import sampleWebDev from "../data/sampleConversations/webdev.json";
-import { type ChatData, ChatDataSchema } from "../schemas/chat";
+import type { ConversationImportResult } from "../lib/conversationImport";
+import { importConversationText } from "../lib/conversationImportClient";
+import type { ChatData } from "../schemas/chat";
 
-type ConversationOption = {
-  name: string;
-  uuid: string;
-  data: ChatData;
-};
+const sampleConversationModules = import.meta.glob<ChatData>("../data/sampleConversations/*.json", {
+  import: "default",
+});
 
 interface JsonInputProps {
   onValidJson: (data: ChatData) => void;
   onConversationList: (conversations: ChatData[], warning?: string) => void;
 }
 
-// Helper function to extract readable error summary from Zod errors
-function extractErrorSummary(errors: ZodIssue[]): string[] {
-  const errorMap = new Map<string, Set<string>>();
-
-  function processError(err: ZodIssue) {
-    if (err.code === "invalid_union") {
-      const path = err.path.join(".");
-      if (!errorMap.has(path)) {
-        errorMap.set(path, new Set());
-      }
-      errorMap.get(path)?.add("Invalid input");
-    } else {
-      // Extract path and message
-      const path = err.path.join(".");
-      const message = err.message === "Invalid input" ? "Invalid data format" : err.message;
-
-      // Skip generic/unhelpful messages
-      if (message === "Invalid data format" && path === "") return;
-
-      // Group errors by path
-      if (!errorMap.has(path)) {
-        errorMap.set(path, new Set());
-      }
-      errorMap.get(path)?.add(message);
-    }
-  }
-
-  errors.forEach(processError);
-
-  // Convert to readable format, limiting duplicates
-  const result: string[] = [];
-  const pathArray = Array.from(errorMap.entries());
-
-  // Sort by path for consistent display
-  pathArray.sort(([a], [b]) => a.localeCompare(b));
-
-  pathArray.forEach(([path, messages]) => {
-    if (path) {
-      const uniqueMessages = Array.from(messages);
-      result.push(`  - ${path}: ${uniqueMessages.join(", ")}`);
-    } else {
-      Array.from(messages).forEach((msg) => {
-        result.push(`  - ${msg}`);
-      });
-    }
-  });
-
-  // Limit output to first 10 unique paths to keep it concise
-  if (result.length > 10) {
-    const showing = result.slice(0, 10);
-    showing.push(`  - ... and ${result.length - 10} more error paths`);
-    return showing;
-  }
-
-  return result;
-}
-
 export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversationList }) => {
   const [jsonText, setJsonText] = useState("");
-  const [options, setOptions] = useState<ConversationOption[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isValidJson, setIsValidJson] = useState(false);
@@ -146,424 +78,37 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
     };
   }, [jsonText, validateJson]);
 
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = async (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
-      handleSubmit();
+      await handleSubmit();
     }
   };
 
-  const processJsonData = (data: unknown) => {
-    // Handle array of conversations
-    if (Array.isArray(data)) {
-      if (data.length === 0) {
-        setError("JSON array is empty.");
-        return;
-      }
-
-      // Validate each conversation in the array as ChatData
-      const validationResults = (data as unknown[]).map((conversation: unknown, index: number) => {
-        const result = ChatDataSchema.safeParse(conversation);
-        if (!result.success) {
-          const convName =
-            (conversation as { name?: string } | null | undefined)?.name ||
-            `Conversation ${index + 1}`;
-          console.error(`Validation failed for ${convName}:`);
-
-          // Log errors in readable format
-          const errors: string[] = [];
-          (result.error.errors as ZodIssue[]).forEach((err) => {
-            if (err.code === "invalid_union" && (err as ZodInvalidUnionIssue).unionErrors) {
-              (err as ZodInvalidUnionIssue).unionErrors.forEach((unionError) => {
-                if (unionError.errors && unionError.errors.length > 0) {
-                  unionError.errors.slice(0, 3).forEach((e) => {
-                    const path = e.path.join(".");
-                    const message = e.message || "Required field missing";
-                    if (path) {
-                      errors.push(`  - ${path}: ${message}`);
-                    }
-                  });
-                }
-              });
-            } else {
-              const path = err.path.join(".");
-              const message = err.message || "Validation error";
-              if (path) {
-                errors.push(`  - ${path}: ${message}`);
-              }
-            }
-          });
-
-          if (errors.length > 0) {
-            console.error(errors.slice(0, 5).join("\n"));
-            if (errors.length > 5) {
-              console.error(`  ... and ${errors.length - 5} more errors`);
-            }
-          }
-        }
-        return { index, result, conversation };
-      });
-
-      const validConversations = validationResults
-        .filter((item) => item.result.success)
-        .map((item) => item.result.data as ChatData);
-
-      const invalidConversations = validationResults.filter((item) => !item.result.success);
-
-      if (validConversations.length > 1) {
-        // Multiple valid conversations - show conversation browser
-        let warningMsg: string | undefined;
-        if (invalidConversations.length > 0) {
-          const errorDetails: string[] = [];
-          errorDetails.push(
-            `❌ Partially loaded: ${validConversations.length} of ${data.length} conversations were valid.\n`,
-          );
-          errorDetails.push(
-            `${invalidConversations.length} conversation(s) had validation errors and were skipped:\n`,
-          );
-
-          // Show details of first few invalid conversations
-          invalidConversations.slice(0, 3).forEach((item) => {
-            const convName =
-              (item.conversation as { name?: string })?.name || `Conversation ${item.index + 1}`;
-            errorDetails.push(`\n• ${convName}:`);
-
-            // Get the actual validation errors
-            if (item.result?.error?.errors) {
-              const errors = item.result.error.errors as ZodIssue[];
-              const processedErrors = extractErrorSummary(errors);
-              if (processedErrors.length > 0) {
-                processedErrors.forEach((error) => {
-                  errorDetails.push(error);
-                });
-              } else {
-                errorDetails.push(`  - Validation failed (unable to parse error details)`);
-              }
-            } else if (item.result?.error) {
-              errorDetails.push(
-                `  - Validation failed: ${item.result.error.message || "Unknown error"}`,
-              );
-            } else {
-              errorDetails.push(`  - Validation failed (no error details available)`);
-            }
-          });
-
-          if (invalidConversations.length > 3) {
-            errorDetails.push(
-              `\n... and ${invalidConversations.length - 3} more conversations with errors`,
-            );
-          }
-
-          errorDetails.push("\n🐛 Unexpected error?");
-          errorDetails.push("If this file was downloaded directly from Claude's export feature:");
-          errorDetails.push(
-            "1. Check existing issues: https://github.com/osteele/claude-chat-viewer/issues",
-          );
-          errorDetails.push(
-            "2. Report new issue: https://github.com/osteele/claude-chat-viewer/issues/new",
-          );
-
-          warningMsg = errorDetails.join("\n");
-          console.log("Warning message being sent:", warningMsg);
-        }
-        onConversationList(validConversations, warningMsg);
-        setError(null);
-        setOptions([]);
-        return;
-      }
-      if (validConversations.length === 1) {
-        // Single valid conversation - check if we should show it directly or in browser
-        if (invalidConversations.length > 0) {
-          // If there were other invalid conversations, show in browser with warning
-          const errorDetails: string[] = [];
-          errorDetails.push(`❌ Partially loaded: 1 of ${data.length} conversations was valid.\n`);
-          errorDetails.push(
-            `${invalidConversations.length} conversation(s) had validation errors:\n`,
-          );
-
-          invalidConversations.slice(0, 3).forEach((item) => {
-            const convName =
-              (item.conversation as { name?: string })?.name || `Conversation ${item.index + 1}`;
-            errorDetails.push(`\n• ${convName}:`);
-
-            // Get the actual validation errors
-            if (item.result?.error?.errors) {
-              const errors = item.result.error.errors as ZodIssue[];
-              const processedErrors = extractErrorSummary(errors);
-              if (processedErrors.length > 0) {
-                processedErrors.forEach((error) => {
-                  errorDetails.push(error);
-                });
-              } else {
-                errorDetails.push(`  - Validation failed (unable to parse error details)`);
-              }
-            } else if (item.result?.error) {
-              errorDetails.push(
-                `  - Validation failed: ${item.result.error.message || "Unknown error"}`,
-              );
-            } else {
-              errorDetails.push(`  - Validation failed (no error details available)`);
-            }
-          });
-
-          errorDetails.push("\n🐛 Unexpected error?");
-          errorDetails.push("If this file was downloaded directly from Claude's export feature:");
-          errorDetails.push(
-            "1. Check existing issues: https://github.com/osteele/claude-chat-viewer/issues",
-          );
-          errorDetails.push(
-            "2. Report new issue: https://github.com/osteele/claude-chat-viewer/issues/new",
-          );
-
-          const warningMsg = errorDetails.join("\n");
-          onConversationList(validConversations, warningMsg);
-        } else {
-          // Only one conversation and it's valid - show it directly
-          onValidJson(validConversations[0]);
-        }
-        setError(null);
-        setOptions([]);
-        return;
-      }
-
-      // If we get here, no valid conversations were found
-      const errorDetails: string[] = [];
-      errorDetails.push(
-        `❌ No valid conversations found in the file (0 of ${data.length} conversations could be loaded)\n`,
-      );
-
-      // Show details of first few invalid conversations
-      invalidConversations.slice(0, 3).forEach((item) => {
-        const convName =
-          (item.conversation as { name?: string })?.name || `Conversation ${item.index + 1}`;
-        errorDetails.push(`\n📄 ${convName}:`);
-
-        const firstErrors = item.result.error?.errors.slice(0, 2) || [];
-        firstErrors.forEach((err: z.ZodIssue) => {
-          const path = err.path.join(".");
-          if (path) {
-            errorDetails.push(`  • At "${path}": ${err.message}`);
-          } else {
-            errorDetails.push(`  • ${err.message}`);
-          }
-        });
-
-        if (item.result.error?.errors && item.result.error.errors.length > 2) {
-          errorDetails.push(`  • ... and ${item.result.error.errors.length - 2} more errors`);
-        }
-      });
-
-      if (invalidConversations.length > 3) {
-        errorDetails.push(
-          `\n... and ${invalidConversations.length - 3} more conversations with errors`,
-        );
-      }
-
-      errorDetails.push("\n💡 This might be:");
-      errorDetails.push("• A corrupted export file");
-      errorDetails.push("• An incompatible format from an older Claude version");
-      errorDetails.push("• A modified or incomplete JSON file");
-
-      setError(errorDetails.join("\n"));
+  const applyImportResult = (result: ConversationImportResult) => {
+    if (result.kind === "conversation") {
+      onValidJson(result.conversation);
+      setError(null);
       return;
     }
-
-    // Single conversation object
-    const result = ChatDataSchema.safeParse(data);
-    if (result.success) {
-      // Only cache if not skipping and file is reasonably small
-      onValidJson(result.data);
+    if (result.kind === "collection") {
+      onConversationList(result.conversations, result.warning);
       setError(null);
-      setOptions([]);
-    } else {
-      // Log validation errors to console in a readable format
-      console.error("Conversation validation failed:");
-
-      // Extract and log the most relevant errors
-      const relevantErrors: string[] = [];
-      (result.error.errors as ZodIssue[]).forEach((err) => {
-        if (err.code === "invalid_union" && (err as ZodInvalidUnionIssue).unionErrors) {
-          (err as ZodInvalidUnionIssue).unionErrors.forEach((unionError) => {
-            if (unionError.errors && unionError.errors.length > 0) {
-              unionError.errors.slice(0, 5).forEach((e) => {
-                const path = e.path.join(".");
-                const message = e.message || "Required field missing";
-                if (path) {
-                  relevantErrors.push(`  - ${path}: ${message}`);
-                } else {
-                  relevantErrors.push(`  - ${message}`);
-                }
-              });
-            }
-          });
-        } else {
-          const path = err.path.join(".");
-          const message = err.message || "Validation error";
-          if (path) {
-            relevantErrors.push(`  - ${path}: ${message}`);
-          } else {
-            relevantErrors.push(`  - ${message}`);
-          }
-        }
-      });
-
-      if (relevantErrors.length > 0) {
-        console.error(`Validation errors:\n${relevantErrors.slice(0, 10).join("\n")}`);
-        if (relevantErrors.length > 10) {
-          console.error(`  ... and ${relevantErrors.length - 10} more errors`);
-        }
-      } else {
-        console.error("  File structure doesn't match expected Claude conversation format");
-      }
-
-      // Create a more user-friendly error message
-      const allErrors = result.error.errors;
-      const errorSummary: string[] = [];
-
-      // Group errors by message path for better readability
-      const errorsByPath = new Map<string, string[]>();
-
-      // For union errors, Zod nests the actual errors inside
-      const processError = (err: z.ZodIssue & { unionErrors?: unknown[] }) => {
-        const path = err.path.join(".");
-        let message = err.message;
-
-        // Handle union errors specially - they contain the actual validation errors
-        if (err.code === "invalid_union" && err.unionErrors) {
-          // Extract the most relevant errors from the union attempts
-          const relevantErrors: string[] = [];
-          (err as ZodInvalidUnionIssue).unionErrors?.forEach((ue) => {
-            if (ue.errors && ue.errors.length > 0) {
-              // Get the first few meaningful errors from each schema attempt
-              ue.errors.slice(0, 3).forEach((e) => {
-                const subPath = e.path.join(".");
-                if (subPath && e.message !== "Invalid input") {
-                  relevantErrors.push(`${subPath}: ${e.message}`);
-                }
-              });
-            }
-          });
-
-          if (relevantErrors.length > 0) {
-            // Skip adding this union error and process the nested errors instead
-            relevantErrors.forEach((error) => {
-              const [errPath, errMsg] = error.split(": ");
-              if (!errorsByPath.has(errPath)) {
-                errorsByPath.set(errPath, []);
-              }
-              errorsByPath.get(errPath)?.push(errMsg);
-            });
-            return; // Don't add the union error itself
-          }
-          // If no relevant errors were extracted, show the raw union errors
-          if (
-            (err as ZodInvalidUnionIssue).unionErrors &&
-            (err as ZodInvalidUnionIssue).unionErrors.length > 0
-          ) {
-            (err as ZodInvalidUnionIssue).unionErrors.forEach((unionError) => {
-              if (unionError.errors && unionError.errors.length > 0) {
-                unionError.errors.slice(0, 5).forEach((e) => {
-                  const subPath = e.path.join(".");
-                  const subMessage = e.message || "Required field missing";
-                  if (!errorsByPath.has(subPath)) {
-                    errorsByPath.set(subPath, []);
-                  }
-                  errorsByPath.get(subPath)?.push(subMessage);
-                });
-              }
-            });
-            return;
-          }
-          message = "Data doesn't match expected conversation format";
-        } else if (message === "Invalid input") {
-          if (err.code === "invalid_type") {
-            message = `Expected ${err.expected}, got ${err.received}`;
-          } else {
-            message = "Invalid data format";
-          }
-        }
-
-        if (!errorsByPath.has(path)) {
-          errorsByPath.set(path, []);
-        }
-        errorsByPath.get(path)?.push(message);
-      };
-
-      allErrors.forEach(processError);
-
-      // Build user-friendly error message
-      errorSummary.push("❌ This file cannot be loaded due to validation errors:\n");
-
-      let errorCount = 0;
-      errorsByPath.forEach((messages, path) => {
-        errorCount++;
-        if (errorCount <= 10) {
-          // Show first 10 errors for more detail
-          if (path) {
-            errorSummary.push(`• At "${path}": ${messages.join(", ")}`);
-          } else {
-            errorSummary.push(`• ${messages.join(", ")}`);
-          }
-        }
-      });
-
-      if (errorCount > 10) {
-        errorSummary.push(`\n... and ${errorCount - 10} more errors`);
-      } else if (errorCount === 0) {
-        // If no specific errors were extracted, show a generic message
-        errorSummary.push(
-          `• The file structure doesn't match any expected Claude conversation format`,
-        );
-        errorSummary.push(
-          `• Missing required fields: uuid, name, created_at, updated_at, chat_messages`,
-        );
-      }
-
-      // Add helpful context
-      errorSummary.push("\n💡 Common issues:");
-      errorSummary.push("• Ensure this is a Claude conversation export");
-      errorSummary.push("• Check that the JSON structure hasn't been modified");
-      errorSummary.push("• Verify all required fields are present");
-
-      errorSummary.push("\n🐛 Unexpected error?");
-      errorSummary.push(
-        "If this file was downloaded directly from Claude's export feature and hasn't been modified:",
-      );
-      errorSummary.push(
-        "1. Check if this issue has been reported: https://github.com/osteele/claude-chat-viewer/issues",
-      );
-      errorSummary.push(
-        "2. If not, please report it: https://github.com/osteele/claude-chat-viewer/issues/new",
-      );
-      errorSummary.push("   Include the error details above when reporting.");
-
-      const errorMessage = errorSummary.join("\n");
-      setError(errorMessage);
+      return;
     }
+    setError(result.message);
   };
 
-  const handleSubmit = () => {
+  const processJsonText = async (text: string) => {
+    applyImportResult(await importConversationText(text));
+  };
+
+  const handleSubmit = async () => {
     if (!jsonText.trim()) {
       setError("Please paste JSON data or upload a file first.");
       return;
     }
-
-    let parsedData: unknown;
-    try {
-      parsedData = JSON.parse(jsonText);
-    } catch (err) {
-      if (err instanceof Error) {
-        const errorMessage = err.message.includes("Unexpected end")
-          ? "The JSON appears to be incomplete. Please check that you've copied the entire content."
-          : `Invalid JSON: ${err.message}. Please check your JSON syntax.`;
-        setError(errorMessage);
-      } else {
-        setError("Failed to parse JSON");
-      }
-      return;
-    }
-
-    processJsonData(parsedData);
+    await processJsonText(jsonText);
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -592,16 +137,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
         const content = await conversationsFile.async("string");
         setJsonText(content);
 
-        try {
-          const parsedData = JSON.parse(content);
-          processJsonData(parsedData);
-        } catch (err) {
-          if (err instanceof Error) {
-            setError(`Invalid JSON in ZIP file: ${err.message}`);
-          } else {
-            setError("Failed to parse conversations.json from ZIP");
-          }
-        }
+        await processJsonText(content);
       } catch (err) {
         if (err instanceof Error) {
           setError(`Error reading ZIP file: ${err.message}`);
@@ -614,21 +150,11 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
 
     // Handle JSON files
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const content = e.target?.result as string;
       if (content) {
         setJsonText(content);
-        try {
-          const parsedData = JSON.parse(content);
-          processJsonData(parsedData);
-        } catch (err) {
-          console.error("JSON parse error:", err);
-          if (err instanceof Error) {
-            setError(`Invalid JSON file: ${err.message}`);
-          } else {
-            setError("Failed to parse JSON file");
-          }
-        }
+        await processJsonText(content);
       }
     };
     reader.onerror = (e) => {
@@ -642,23 +168,12 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
     fileInputRef.current?.click();
   };
 
-  const loadSampleData = () => {
-    // Assemble sample conversations from imported files
-    const sampleConversations = [
-      samplePython,
-      sampleWebDev,
-      sampleData,
-      sampleCreativeWriting,
-      sampleMath,
-      sampleBusiness,
-      sampleCooking,
-      sampleHistory,
-    ];
-
-    // Load the sample conversations using the same flow as multiple conversation files
+  const loadSampleData = async () => {
+    const sampleConversations = await Promise.all(
+      Object.values(sampleConversationModules).map((load) => load()),
+    );
     setError(null);
-    setOptions([]);
-    onConversationList(sampleConversations as ChatData[]);
+    onConversationList(sampleConversations);
   };
 
   const handlePasteFromClipboard = async () => {
@@ -671,11 +186,6 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
       // Fallback for browsers that don't support clipboard API or user denied permission
       setError("Unable to read from clipboard. Please paste manually using Ctrl/Cmd+V.");
     }
-  };
-
-  const selectConversation = (option: ConversationOption) => {
-    onValidJson(option.data);
-    setOptions([]);
   };
 
   const handleDragEnter = (e: React.DragEvent) => {
@@ -1148,26 +658,6 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
         onChange={handleFileUpload}
         className="hidden"
       />
-
-      {options.length > 0 && (
-        <div className="mt-6 p-6 bg-white border border-gray-200 rounded-lg shadow-sm">
-          <div className="text-sm font-medium mb-4">
-            Multiple conversations found. Please select one:
-          </div>
-          <div className="grid gap-2 max-h-96 overflow-y-auto">
-            {options.map((option) => (
-              <Button
-                key={option.uuid}
-                onClick={() => selectConversation(option)}
-                variant="outline"
-                className="justify-start text-left h-auto p-4"
-              >
-                <div className="truncate">{option.name}</div>
-              </Button>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

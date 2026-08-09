@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import type { ChatData } from "../schemas/chat";
 import { chatToHtml, chatToText, formatValidationErrors } from "./utils";
 
-describe.skip("formatValidationErrors", () => {
+describe("formatValidationErrors", () => {
   it("should add line numbers to validation errors", () => {
     const json = `{
   "name": "Test Chat",
@@ -42,8 +42,8 @@ describe.skip("formatValidationErrors", () => {
     ];
 
     const result = formatValidationErrors(json, errors);
-    expect(result).toContain("(line 13)"); // line number for type
-    expect(result).toContain("(line 14)"); // line number for text
+    expect(result).toContain("(line 19)"); // line number for type
+    expect(result).toContain("(line 18)"); // parent object for missing text
   });
 });
 
@@ -150,7 +150,7 @@ describe("chatToHtml", () => {
   });
 });
 
-describe.skip("buildLineMap", () => {
+describe("buildLineMap", () => {
   it("should correctly map JSON paths to line numbers", () => {
     const json = `{
   "chat_messages": [
@@ -173,7 +173,7 @@ describe.skip("buildLineMap", () => {
     ];
 
     const result = formatValidationErrors(json, errors);
-    expect(result).toContain("(line 5)");
+    expect(result).toContain("(line 6)");
   });
 
   it("should handle nested arrays and objects", () => {
