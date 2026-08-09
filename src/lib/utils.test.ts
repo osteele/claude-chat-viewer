@@ -1,6 +1,7 @@
+import JSZip from "jszip";
 import { describe, expect, it } from "bun:test";
 import type { ChatData } from "../schemas/chat";
-import { chatToHtml, chatToText, formatValidationErrors } from "./utils";
+import { chatsToMarkdownZip, chatToHtml, chatToText, formatValidationErrors } from "./utils";
 
 describe.skip("formatValidationErrors", () => {
   it("should add line numbers to validation errors", () => {
@@ -95,6 +96,71 @@ describe("chatToText", () => {
     expect(result).toBe(
       "Human:\nHello\nHow are you?\n\nClaude:\nI'm fine, thank you!\nprint('hi')\n",
     );
+  });
+});
+
+describe("chatsToMarkdownZip", () => {
+  const makeChat = (uuid: string, name: string): ChatData => ({
+    name,
+    uuid,
+    summary: "",
+    created_at: "2024-01-01T00:00:00Z",
+    updated_at: "2024-01-01T00:00:00Z",
+    chat_messages: [
+      {
+        uuid: `${uuid}-msg1`,
+        sender: "human",
+        created_at: "2024-01-01T00:00:00Z",
+        updated_at: "2024-01-01T00:00:00Z",
+        index: 0,
+        text: "Hello",
+        truncated: false,
+        content: [{ type: "text", text: "Hello" }],
+      },
+    ],
+  });
+
+  it("should create one markdown entry per conversation", async () => {
+    const chats = [makeChat("a", "First Chat"), makeChat("b", "Second Chat")];
+
+    const blob = await chatsToMarkdownZip(chats);
+    const zip = await JSZip.loadAsync(await blob.arrayBuffer());
+    const names = Object.keys(zip.files);
+
+    expect(names).toHaveLength(2);
+  });
+
+  it("should write each conversation's markdown into its entry", async () => {
+    const chats = [makeChat("a", "First Chat")];
+
+    const blob = await chatsToMarkdownZip(chats);
+    const zip = await JSZip.loadAsync(await blob.arrayBuffer());
+    const entry = zip.files["first_chat.md"];
+
+    expect(entry).toBeDefined();
+    const content = await entry.async("string");
+    expect(content).toContain("# First Chat");
+    expect(content).toContain("Hello");
+  });
+
+  it("should disambiguate entries when conversation names collide", async () => {
+    const chats = [makeChat("a", "Same Name"), makeChat("b", "Same Name")];
+
+    const blob = await chatsToMarkdownZip(chats);
+    const zip = await JSZip.loadAsync(await blob.arrayBuffer());
+    const names = Object.keys(zip.files).sort();
+
+    expect(names).toEqual(["same_name-2.md", "same_name.md"]);
+  });
+
+  it("should fall back to a default name for untitled conversations", async () => {
+    const chats = [makeChat("a", "")];
+
+    const blob = await chatsToMarkdownZip(chats);
+    const zip = await JSZip.loadAsync(await blob.arrayBuffer());
+    const names = Object.keys(zip.files);
+
+    expect(names).toEqual(["untitled-conversation.md"]);
   });
 });
 
