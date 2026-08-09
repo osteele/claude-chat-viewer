@@ -1,7 +1,7 @@
-import type { ChatData } from '../schemas/chat';
+import type { ChatData } from "../schemas/chat";
 
-export type SortField = 'created_at' | 'updated_at';
-export type SortOrder = 'asc' | 'desc';
+export type SortField = "created_at" | "updated_at";
+export type SortOrder = "asc" | "desc";
 
 export interface SortConfig {
   field: SortField;
@@ -19,13 +19,13 @@ export interface SortConfig {
 export function sortConversations(
   conversations: ChatData[],
   field: SortField,
-  order: SortOrder
+  order: SortOrder,
 ): ChatData[] {
   return [...conversations].sort((a, b) => {
     const dateA = new Date(a[field]).getTime();
     const dateB = new Date(b[field]).getTime();
 
-    if (order === 'asc') {
+    if (order === "asc") {
       return dateA - dateB; // Ascending: oldest first
     }
     return dateB - dateA; // Descending: newest first
@@ -37,10 +37,10 @@ export function sortConversations(
  */
 export function getSortFieldLabel(field: SortField): string {
   switch (field) {
-    case 'created_at':
-      return 'Created';
-    case 'updated_at':
-      return 'Modified';
+    case "created_at":
+      return "Created";
+    case "updated_at":
+      return "Modified";
   }
 }
 
@@ -48,5 +48,5 @@ export function getSortFieldLabel(field: SortField): string {
  * Gets a human-readable label for a sort order.
  */
 export function getSortOrderLabel(order: SortOrder): string {
-  return order === 'asc' ? 'Oldest First' : 'Newest First';
+  return order === "asc" ? "Oldest First" : "Newest First";
 }

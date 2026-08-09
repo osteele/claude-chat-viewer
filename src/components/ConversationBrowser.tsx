@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { findSearchMatches, type SearchMatch } from "../lib/searchUtils";
 import type { ChatData } from "../schemas/chat";
-import { sortConversations, type SortField, type SortOrder } from "../utils/sorting";
+import { type SortField, type SortOrder, sortConversations } from "../utils/sorting";
 
 interface ConversationBrowserProps {
   conversations: ChatData[];
