@@ -1,6 +1,5 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../tailwind.config.ts";
 
 @layer base {
   :root {
@@ -96,11 +95,11 @@
   }
 
   /* Ensure print-only content is visible */
-  .print\\:block {
+  .print\:block {
     display: block;
   }
 
-  .print\\:hidden {
+  .print\:hidden {
     display: none;
   }
 

@@ -21,17 +21,29 @@ export default defineConfig({
   },
   publicDir: "public",
   build: {
+    chunkSizeWarningLimit: 750,
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Split React and React DOM into separate chunk for better caching
-          "vendor-react": ["react", "react-dom"],
-          // Syntax highlighting is lazy loaded but split when loaded
-          "vendor-syntax": ["react-syntax-highlighter", "prismjs"],
-          // JSZip is lazy loaded but split when loaded
-          "vendor-zip": ["jszip"],
-          // Utilities and other libraries
-          "vendor-utils": ["react-markdown", "file-saver", "mime"],
+        manualChunks(id) {
+          if (id.includes("/node_modules/react/") || id.includes("/node_modules/react-dom/")) {
+            return "vendor-react";
+          }
+          if (
+            id.includes("/node_modules/react-syntax-highlighter/") ||
+            id.includes("/node_modules/prismjs/")
+          ) {
+            return "vendor-syntax";
+          }
+          if (id.includes("/node_modules/jszip/")) {
+            return "vendor-zip";
+          }
+          if (
+            id.includes("/node_modules/react-markdown/") ||
+            id.includes("/node_modules/file-saver/") ||
+            id.includes("/node_modules/mime/")
+          ) {
+            return "vendor-utils";
+          }
         },
       },
     },

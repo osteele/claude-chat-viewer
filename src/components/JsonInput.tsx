@@ -91,7 +91,7 @@ export const JsonInput: React.FC<JsonInputProps> = ({ onValidJson, onConversatio
   const [isValidJson, setIsValidJson] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounter = useRef(0);
-  const validationTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const validationTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // Live JSON validation with debouncing
   const validateJson = useCallback(

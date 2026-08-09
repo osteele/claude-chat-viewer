@@ -126,25 +126,28 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, showThinking, artifa
               }
 
               return (
-                <ReactMarkdown
+                <div
                   key={`${message.uuid}-md-${index}-${segment.type}-${segment.content.slice(0, 16)}`}
                   className="prose font-serif max-w-none leading-loose"
-                  components={{
-                    code({ className, children, ...props }) {
-                      return (
-                        <code
-                          {...props}
-                          className={`text-[#986460] bg-[#f1f0eb] font-normal ${className}`}
-                        >
-                          {children}
-                        </code>
-                      );
-                    },
-                    li: ({ children }) => <li className="my-0">{children}</li>,
-                  }}
                 >
-                  {segment.content}
-                </ReactMarkdown>
+                  <ReactMarkdown
+                    components={{
+                      code({ className, children, ...props }) {
+                        return (
+                          <code
+                            {...props}
+                            className={`text-[#986460] bg-[#f1f0eb] font-normal ${className}`}
+                          >
+                            {children}
+                          </code>
+                        );
+                      },
+                      li: ({ children }) => <li className="my-0">{children}</li>,
+                    }}
+                  >
+                    {segment.content}
+                  </ReactMarkdown>
+                </div>
               );
             })}
           </div>
